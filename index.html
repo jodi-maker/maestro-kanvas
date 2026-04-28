@@ -1136,6 +1136,59 @@
     display: grid;
     place-items: center;
   }
+
+  /* Border popover */
+  .border-popover {
+    position: absolute;
+    top: 44px;
+    right: 4px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    padding: 12px;
+    display: none;
+    z-index: 60;
+    box-shadow: 0 14px 36px rgba(0,0,0,0.4);
+    backdrop-filter: blur(20px);
+    width: 200px;
+  }
+  .border-popover.open { display: block; }
+  .border-section { margin-bottom: 10px; }
+  .border-section:last-child { margin-bottom: 0; }
+  .border-popover-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .border-style-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+  .border-style-btn, .border-thick-btn {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 8px 4px;
+    cursor: pointer;
+    color: var(--ink);
+    display: grid;
+    place-items: center;
+    transition: all 0.12s;
+  }
+  .border-style-btn:hover, .border-thick-btn:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .border-style-btn.active, .border-thick-btn.active {
+    background: var(--gradient);
+    border-color: transparent;
+    color: white;
+  }
   .ctx-color {
     width: 18px; height: 18px;
     border-radius: 50%;
@@ -2159,6 +2212,62 @@
             <button class="text-color-swatch reset-swatch" onclick="setSelectedTextColor('')" title="Reset">↻</button>
           </div>
         </div>
+        <button class="ctx-btn" onclick="toggleBorderPicker(event)" title="Border">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/></svg>
+        </button>
+        <div class="border-popover" id="border-popover">
+          <div class="border-section">
+            <div class="border-popover-label">Style</div>
+            <div class="border-style-row">
+              <button class="border-style-btn" data-style="none" onclick="setBorderStyle('none')" title="No border">
+                <svg width="22" height="6" viewBox="0 0 22 6"><line x1="2" y1="3" x2="20" y2="3" stroke="currentColor" stroke-width="1" stroke-dasharray="1 2" opacity="0.4"/></svg>
+              </button>
+              <button class="border-style-btn" data-style="solid" onclick="setBorderStyle('solid')" title="Solid">
+                <svg width="22" height="6" viewBox="0 0 22 6"><line x1="2" y1="3" x2="20" y2="3" stroke="currentColor" stroke-width="2"/></svg>
+              </button>
+              <button class="border-style-btn" data-style="dashed" onclick="setBorderStyle('dashed')" title="Dashed">
+                <svg width="22" height="6" viewBox="0 0 22 6"><line x1="2" y1="3" x2="20" y2="3" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3"/></svg>
+              </button>
+              <button class="border-style-btn" data-style="dotted" onclick="setBorderStyle('dotted')" title="Dotted">
+                <svg width="22" height="6" viewBox="0 0 22 6"><line x1="2" y1="3" x2="20" y2="3" stroke="currentColor" stroke-width="2.5" stroke-dasharray="1 3" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="border-section">
+            <div class="border-popover-label">Thickness</div>
+            <div class="border-style-row">
+              <button class="border-thick-btn" data-thick="1" onclick="setBorderThickness(1)" title="Thin">
+                <svg width="22" height="6" viewBox="0 0 22 6"><line x1="2" y1="3" x2="20" y2="3" stroke="currentColor" stroke-width="1"/></svg>
+              </button>
+              <button class="border-thick-btn" data-thick="2" onclick="setBorderThickness(2)" title="Medium">
+                <svg width="22" height="6" viewBox="0 0 22 6"><line x1="2" y1="3" x2="20" y2="3" stroke="currentColor" stroke-width="2"/></svg>
+              </button>
+              <button class="border-thick-btn" data-thick="4" onclick="setBorderThickness(4)" title="Thick">
+                <svg width="22" height="6" viewBox="0 0 22 6"><line x1="2" y1="3" x2="20" y2="3" stroke="currentColor" stroke-width="4"/></svg>
+              </button>
+              <button class="border-thick-btn" data-thick="6" onclick="setBorderThickness(6)" title="Heavy">
+                <svg width="22" height="6" viewBox="0 0 22 6"><line x1="2" y1="3" x2="20" y2="3" stroke="currentColor" stroke-width="6"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="border-section">
+            <div class="border-popover-label">Colour</div>
+            <div class="text-color-grid">
+              <button class="text-color-swatch" style="background:#0a0a14;" onclick="setBorderColor('#0a0a14')" title="Black"></button>
+              <button class="text-color-swatch" style="background:#ffffff;" onclick="setBorderColor('#ffffff')" title="White"></button>
+              <button class="text-color-swatch" style="background:#6b7280;" onclick="setBorderColor('#6b7280')" title="Grey"></button>
+              <button class="text-color-swatch" style="background:#6366f1;" onclick="setBorderColor('#6366f1')" title="Indigo"></button>
+              <button class="text-color-swatch" style="background:#a855f7;" onclick="setBorderColor('#a855f7')" title="Purple"></button>
+              <button class="text-color-swatch" style="background:#06b6d4;" onclick="setBorderColor('#06b6d4')" title="Cyan"></button>
+              <button class="text-color-swatch" style="background:#10b981;" onclick="setBorderColor('#10b981')" title="Green"></button>
+              <button class="text-color-swatch" style="background:#f59e0b;" onclick="setBorderColor('#f59e0b')" title="Amber"></button>
+              <button class="text-color-swatch" style="background:#f43f5e;" onclick="setBorderColor('#f43f5e')" title="Red"></button>
+              <button class="text-color-swatch" style="background:#ec4899;" onclick="setBorderColor('#ec4899')" title="Pink"></button>
+              <button class="text-color-swatch custom-swatch-mini" onclick="openCustomColorPicker('#6366f1', setBorderColor)" title="Custom">+</button>
+              <button class="text-color-swatch reset-swatch" onclick="setBorderColor('')" title="Reset">↻</button>
+            </div>
+          </div>
+        </div>
         <div class="ctx-divider"></div>
         <button class="ctx-btn" onclick="promptLink()"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 9a3 3 0 004 0l2-2a3 3 0 00-4-4L8 4"/><path d="M9 7a3 3 0 00-4 0L3 9a3 3 0 004 4l1-1"/></svg></button>
         <button class="ctx-btn" onclick="duplicateSelected()"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="10" height="10" rx="1"/><path d="M10 4V2H2v8h2"/></svg></button>
@@ -3111,13 +3220,84 @@
   function toggleTextColorPicker(e) {
     e.stopPropagation();
     document.getElementById('text-color-popover').classList.toggle('open');
+    document.getElementById('border-popover')?.classList.remove('open');
   }
 
-  // Close popover when clicking outside
+  function toggleBorderPicker(e) {
+    e.stopPropagation();
+    if (!selectedEl) { showToast('Select a shape or frame first'); return; }
+    if (!selectedEl.matches('.shape, .frame')) {
+      showToast('Border options work on shapes and frames');
+      return;
+    }
+    document.getElementById('border-popover').classList.toggle('open');
+    document.getElementById('text-color-popover')?.classList.remove('open');
+    refreshBorderPickerState();
+  }
+
+  // Show which style/thickness is currently active for the selected element
+  function refreshBorderPickerState() {
+    if (!selectedEl) return;
+    const cs = window.getComputedStyle(selectedEl);
+    const style = cs.borderStyle?.split(' ')[0] || 'solid';
+    const thick = parseFloat(cs.borderTopWidth) || 2;
+    document.querySelectorAll('.border-style-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.style === (style === 'none' ? 'none' : style));
+    });
+    document.querySelectorAll('.border-thick-btn').forEach(b => {
+      const t = parseFloat(b.dataset.thick);
+      b.classList.toggle('active', Math.abs(t - thick) < 0.5);
+    });
+  }
+
+  function setBorderStyle(style) {
+    if (!selectedEl) return;
+    selectedEl.style.borderStyle = style;
+    if (style === 'none') {
+      selectedEl.style.borderWidth = '0';
+    } else if (parseFloat(window.getComputedStyle(selectedEl).borderTopWidth) === 0) {
+      // If border was previously none, restore a sensible default thickness
+      selectedEl.style.borderWidth = '2px';
+    }
+    refreshBorderPickerState();
+  }
+
+  function setBorderThickness(px) {
+    if (!selectedEl) return;
+    selectedEl.style.borderWidth = px + 'px';
+    // If style was 'none', switch to 'solid' automatically so the change is visible
+    const cs = window.getComputedStyle(selectedEl);
+    if (cs.borderStyle === 'none' || cs.borderTopStyle === 'none') {
+      selectedEl.style.borderStyle = 'solid';
+    }
+    refreshBorderPickerState();
+  }
+
+  function setBorderColor(hex) {
+    if (!selectedEl) return;
+    if (hex === '') {
+      selectedEl.style.borderColor = '';
+      selectedEl.style.borderStyle = '';
+      selectedEl.style.borderWidth = '';
+      showToast('Border reset');
+    } else {
+      selectedEl.style.borderColor = hex;
+      // Make sure border is visible
+      const cs = window.getComputedStyle(selectedEl);
+      if (cs.borderStyle === 'none' || cs.borderTopStyle === 'none') {
+        selectedEl.style.borderStyle = 'solid';
+        selectedEl.style.borderWidth = '2px';
+      }
+    }
+  }
+
+  // Close popovers when clicking outside
   document.addEventListener('click', e => {
     if (!e.target.closest('.text-color-popover, .ctx-btn[onclick*="toggleTextColorPicker"]')) {
-      const pop = document.getElementById('text-color-popover');
-      if (pop) pop.classList.remove('open');
+      document.getElementById('text-color-popover')?.classList.remove('open');
+    }
+    if (!e.target.closest('.border-popover, .ctx-btn[onclick*="toggleBorderPicker"]')) {
+      document.getElementById('border-popover')?.classList.remove('open');
     }
   });
 
