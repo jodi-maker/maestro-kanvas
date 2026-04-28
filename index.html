@@ -515,6 +515,60 @@
   }
   .stroke-btn.active { background: var(--gradient); border-color: transparent; color: white; }
 
+  /* Custom-colour "+" swatch */
+  .custom-swatch {
+    background: linear-gradient(45deg, #ff5b1f 0%, #a855f7 33%, #6366f1 66%, #06b6d4 100%) !important;
+    color: white !important;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    line-height: 1;
+    border: 2px solid var(--surface) !important;
+    box-shadow: 0 0 0 1px var(--line-strong);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+  }
+  .ctx-color.custom-swatch { width: 18px; height: 18px; border-radius: 50%; padding: 0; font-size: 11px; }
+  .color-swatch.custom-swatch { font-size: 13px; }
+
+  /* Frame preset grid */
+  .frame-preset-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    width: 220px;
+  }
+  .frame-preset {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px;
+    cursor: pointer;
+    color: var(--ink);
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .frame-preset:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    transform: translateY(-1px);
+  }
+  .fp-icon {
+    width: 100%;
+    background: var(--line-strong);
+    border: 1px dashed var(--line-strong);
+    border-radius: 4px;
+    margin-bottom: 5px;
+    max-height: 50px;
+  }
+  .fp-label {
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+
   .top-bar-canvas {
     position: absolute;
     top: 14px;
@@ -626,7 +680,9 @@
     cursor: inherit;
   }
   .sticky-content[contenteditable="true"] {
-    cursor: text;
+    cursor: text !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
     background: rgba(255,255,255,0.5);
     border-radius: 4px;
     padding: 2px;
@@ -674,8 +730,97 @@
   .shape.sh-rect { border-radius: 8px; }
   .shape.sh-rounded { border-radius: 20px; }
   .shape.sh-circle { border-radius: 50%; aspect-ratio: 1; }
+  .shape.sh-oval { border-radius: 50%; }
   .shape.sh-diamond { transform: rotate(45deg); min-width: 90px; min-height: 90px; }
-  .shape.sh-diamond > span { transform: rotate(-45deg); }
+  .shape.sh-diamond > .shape-label { transform: rotate(-45deg); }
+  .shape.sh-triangle {
+    background: transparent !important;
+    border: none !important;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+  }
+  .shape.sh-triangle::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: inherit;
+    background-color: currentColor;
+    opacity: 0.8;
+  }
+  .shape.sh-hexagon {
+    clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%);
+    border-radius: 0 !important;
+  }
+  .shape.sh-star {
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+    border-radius: 0 !important;
+  }
+  .shape.sh-arrow {
+    clip-path: polygon(0% 30%, 70% 30%, 70% 10%, 100% 50%, 70% 90%, 70% 70%, 0% 70%);
+    border-radius: 0 !important;
+  }
+  .shape.sh-parallelogram {
+    clip-path: polygon(20% 0%, 100% 0%, 80% 100%, 0% 100%);
+    border-radius: 0 !important;
+  }
+
+  .shape-label {
+    cursor: inherit;
+    outline: none;
+    pointer-events: auto;
+  }
+  .shape-label[contenteditable="true"], .shape-label.is-editing {
+    cursor: text !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    background: rgba(255,255,255,0.6);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* ===== RESIZE HANDLES ===== */
+  .resize-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    z-index: 10;
+    display: none;
+  }
+  .selected > .resize-handle,
+  .frame.selected > .resize-handle,
+  .shape.selected > .resize-handle,
+  .img-card.selected > .resize-handle {
+    display: block;
+  }
+  .handle-nw { top: -6px; left: -6px; cursor: nwse-resize; }
+  .handle-n  { top: -6px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+  .handle-ne { top: -6px; right: -6px; cursor: nesw-resize; }
+  .handle-e  { top: 50%; right: -6px; transform: translateY(-50%); cursor: ew-resize; }
+  .handle-se { bottom: -6px; right: -6px; cursor: nwse-resize; }
+  .handle-s  { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+  .handle-sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
+  .handle-w  { top: 50%; left: -6px; transform: translateY(-50%); cursor: ew-resize; }
+
+  /* ===== EDITABLE TITLES (board name, frame label) ===== */
+  .editable-title {
+    cursor: text;
+    outline: none;
+    padding: 1px 4px;
+    margin: -1px -4px;
+    border-radius: 4px;
+    transition: background 0.12s;
+  }
+  .editable-title:hover {
+    background: var(--accent-soft);
+  }
+  .editable-title.is-editing {
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 2px var(--accent);
+    user-select: text !important;
+    -webkit-user-select: text !important;
+  }
 
   .img-card {
     position: absolute;
@@ -703,20 +848,29 @@
     padding: 38px 18px 18px;
     pointer-events: none;
     z-index: 1;
+    cursor: move;
   }
+  .frame[data-frame="1"] { pointer-events: auto; }
   .frame > * { pointer-events: auto; }
+  .frame.selected {
+    border-color: var(--accent);
+    border-style: solid;
+  }
   .frame-label {
     position: absolute;
     top: -12px;
     left: 14px;
-    background: var(--ink);
-    color: var(--paper);
-    padding: 3px 10px;
-    border-radius: 4px;
-    font-family: 'JetBrains Mono', monospace;
+    background: var(--gradient);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
     font-size: 10px;
+    font-weight: 600;
     text-transform: uppercase;
+    letter-spacing: 0.05em;
     pointer-events: auto;
+    cursor: text;
   }
 
   .text-el {
@@ -728,6 +882,12 @@
     min-width: 80px;
     border-radius: 4px;
     z-index: 3;
+  }
+  .text-el[contenteditable="true"] {
+    cursor: text !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    background: var(--accent-soft);
   }
 
   /* ctx menu */
@@ -1593,7 +1753,7 @@
     <div class="view-panel active canvas-view" id="canvas-panel">
       <div class="board-name">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/></svg>
-        Q2 <em>Discovery</em>
+        <span class="editable-title" ondblclick="makeEditable(this)">Q2 Discovery</span>
       </div>
       <div class="top-bar-canvas">
         <button class="action-chip" onclick="openImageModal()" title="Image">
@@ -1615,30 +1775,78 @@
         <button class="tool" onclick="addSticky()"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="12" height="12" rx="1"/></svg><span class="tool-tip">Sticky · N</span></button>
         <button class="tool" onclick="addText()"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h10M9 4v10M7 14h4"/></svg><span class="tool-tip">Text · T</span></button>
         <button class="tool" onclick="toggleFlyout('shapes')"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="12" height="12"/></svg><span class="tool-tip">Shapes · S</span></button>
+        <button class="tool" onclick="toggleFrameMenu()"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="14" height="11" rx="1.5"/><path d="M2 7h14"/></svg><span class="tool-tip">Frame · F</span></button>
         <div class="tool-divider"></div>
         <button class="tool" onclick="togglePen()"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 15l2-5 8-8 3 3-8 8z"/></svg><span class="tool-tip">Pen · P</span></button>
         <button class="tool" onclick="openImageModal()"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="13" height="13" rx="1"/><circle cx="6.5" cy="6.5" r="1.5"/><path d="M3 13l4-4 2 2 3-3 3 3"/></svg><span class="tool-tip">Image · I</span></button>
         <button class="tool" onclick="toggleFlyout('emoji')"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="6"/><circle cx="6.5" cy="7" r="0.8" fill="currentColor"/><circle cx="11.5" cy="7" r="0.8" fill="currentColor"/><path d="M6 11c1 1.5 4 1.5 5 0"/></svg><span class="tool-tip">Emoji · E</span></button>
       </div>
 
-      <div class="flyout" id="flyout-shapes" style="top: 40%;">
+      <div class="flyout" id="flyout-shapes" style="top: 38%;">
         <div class="flyout-title">Shapes</div>
         <div class="shape-grid">
-          <button class="shape-btn" onclick="addShape('sh-rect')"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="14" height="10" rx="1"/></svg></button>
-          <button class="shape-btn" onclick="addShape('sh-rounded')"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="14" height="10" rx="5"/></svg></button>
-          <button class="shape-btn" onclick="addShape('sh-circle')"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="6"/></svg></button>
-          <button class="shape-btn" onclick="addShape('sh-diamond')"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 2l7 7-7 7-7-7z"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-rect')" title="Rectangle"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="14" height="10" rx="1"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-rounded')" title="Rounded"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="14" height="10" rx="5"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-circle')" title="Circle"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="6"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-oval')" title="Oval"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="9" cy="9" rx="7" ry="4.5"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-diamond')" title="Diamond"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 2l7 7-7 7-7-7z"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-triangle')" title="Triangle"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 2l7 13H2z"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-hexagon')" title="Hexagon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 2h8l4 7-4 7H5L1 9z"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-star')" title="Star"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 2l2 5 5 .5-4 3.5 1.5 5L9 13l-4.5 3 1.5-5L2 7.5 7 7z"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-arrow')" title="Arrow"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 9h11M11 5l4 4-4 4"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-parallelogram')" title="Parallelogram"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 4h11l-3 10H2z"/></svg></button>
+        </div>
+        <div class="flyout-title" style="margin-top:10px;">Fill colour</div>
+        <div class="color-row">
+          <div class="color-swatch" style="background:#a8d8ff;" onclick="setShapeColor('#a8d8ff', this)"></div>
+          <div class="color-swatch" style="background:#ffb8c8;" onclick="setShapeColor('#ffb8c8', this)"></div>
+          <div class="color-swatch" style="background:#c8f24c;" onclick="setShapeColor('#c8f24c', this)"></div>
+          <div class="color-swatch" style="background:#d4b8ff;" onclick="setShapeColor('#d4b8ff', this)"></div>
+          <div class="color-swatch" style="background:#ffd4a8;" onclick="setShapeColor('#ffd4a8', this)"></div>
+          <button class="color-swatch custom-swatch" title="Custom colour" onclick="openCustomColorPicker(currentShapeColor, applyCustomShapeColor)">+</button>
+        </div>
+      </div>
+
+      <!-- FRAME MENU -->
+      <div class="flyout" id="frame-menu" style="top: 44%;">
+        <div class="flyout-title">Add frame</div>
+        <div class="frame-preset-grid">
+          <button class="frame-preset" onclick="addFrame('custom'); toggleFrameMenu();">
+            <div class="fp-icon" style="aspect-ratio: 16/10;"></div>
+            <div class="fp-label">Custom</div>
+          </button>
+          <button class="frame-preset" onclick="addFrame('fhd'); toggleFrameMenu();">
+            <div class="fp-icon" style="aspect-ratio: 16/9;"></div>
+            <div class="fp-label">1080p</div>
+          </button>
+          <button class="frame-preset" onclick="addFrame('a4l'); toggleFrameMenu();">
+            <div class="fp-icon" style="aspect-ratio: 1.41/1;"></div>
+            <div class="fp-label">A4 land.</div>
+          </button>
+          <button class="frame-preset" onclick="addFrame('a4p'); toggleFrameMenu();">
+            <div class="fp-icon" style="aspect-ratio: 1/1.41;"></div>
+            <div class="fp-label">A4 port.</div>
+          </button>
+          <button class="frame-preset" onclick="addFrame('sq'); toggleFrameMenu();">
+            <div class="fp-icon" style="aspect-ratio: 1;"></div>
+            <div class="fp-label">Square</div>
+          </button>
+          <button class="frame-preset" onclick="addFrame('classic'); toggleFrameMenu();">
+            <div class="fp-icon" style="aspect-ratio: 4/3;"></div>
+            <div class="fp-label">4:3</div>
+          </button>
         </div>
       </div>
 
       <div class="flyout" id="flyout-pen" style="top: 55%;">
-        <div class="flyout-title">Pen color</div>
+        <div class="flyout-title">Pen colour</div>
         <div class="color-row">
           <div class="color-swatch active" style="background:#0e0e10;" onclick="setPenColor('#0e0e10', this)"></div>
           <div class="color-swatch" style="background:#ff5b1f;" onclick="setPenColor('#ff5b1f', this)"></div>
           <div class="color-swatch" style="background:#d44a4a;" onclick="setPenColor('#d44a4a', this)"></div>
           <div class="color-swatch" style="background:#5bc4a8;" onclick="setPenColor('#5bc4a8', this)"></div>
           <div class="color-swatch" style="background:#7b8cd4;" onclick="setPenColor('#7b8cd4', this)"></div>
+          <button class="color-swatch custom-swatch" title="Custom colour" onclick="openCustomColorPicker(penColor, applyCustomPenColor)">+</button>
         </div>
         <div class="flyout-title">Thickness</div>
         <div class="stroke-row">
@@ -1677,6 +1885,7 @@
           <div class="ctx-color" style="background:#c8f24c;" onclick="setSelectedColor('s-lime','#c8f24c',event)"></div>
           <div class="ctx-color" style="background:#ffd4a8;" onclick="setSelectedColor('s-peach','#ffd4a8',event)"></div>
           <div class="ctx-color" style="background:#a8e8c8;" onclick="setSelectedColor('s-mint','#a8e8c8',event)"></div>
+          <button class="ctx-color custom-swatch" title="Custom colour" onclick="openCustomColorPicker('#a8d8ff', applyCustomStickyColor)">+</button>
         </div>
         <div class="ctx-divider"></div>
         <select class="ctx-font-select" onchange="setSelectedFont(this.value)">
@@ -1699,7 +1908,7 @@
         <svg class="pen-layer" id="pen-layer" xmlns="http://www.w3.org/2000/svg"></svg>
 
         <div class="frame" style="left: 180px; top: 100px; width: 580px; height: 270px;">
-          <div class="frame-label">◆ Discovery</div>
+          <div class="frame-label editable-title" ondblclick="makeEditable(this)">◆ Discovery</div>
         </div>
 
         <div class="sticky s-yellow font-sans" style="left: 210px; top: 145px;">
@@ -2532,16 +2741,15 @@
   }
   function hideCtxMenu() { document.getElementById('ctx-menu').classList.remove('open'); }
 
-  let dragEl = null, offX = 0, offY = 0, dragParent = null;
+  let dragEl = null, offX = 0, offY = 0, dragParent = null, dragMoved = false;
   function startDrag(el, e) {
     dragEl = el;
+    dragMoved = false;
     // Re-parent the element to the canvas surface so its position is independent
     // of any frame it was inside. This makes drag work uniformly across the canvas.
     dragParent = canvasSurface;
     const r = el.getBoundingClientRect();
     const surfaceRect = canvasSurface.getBoundingClientRect();
-    // If the element isn't already a direct child of canvas-surface, re-parent it
-    // and convert its position to surface-relative coordinates.
     if (el.parentElement !== canvasSurface) {
       el.style.left = (r.left - surfaceRect.left + canvasSurface.scrollLeft) + 'px';
       el.style.top = (r.top - surfaceRect.top + canvasSurface.scrollTop) + 'px';
@@ -2550,10 +2758,13 @@
     offX = e.clientX - r.left;
     offY = e.clientY - r.top;
     el.style.zIndex = 100;
-    e.preventDefault();
+    // NOTE: do NOT preventDefault here — it would block focus events on
+    // editable children. We only preventDefault once movement actually starts.
   }
   document.addEventListener('mousemove', e => {
     if (!dragEl) return;
+    dragMoved = true;
+    e.preventDefault(); // prevent text selection during actual drag
     const surfaceRect = canvasSurface.getBoundingClientRect();
     dragEl.style.left = (e.clientX - surfaceRect.left + canvasSurface.scrollLeft - offX) + 'px';
     dragEl.style.top = (e.clientY - surfaceRect.top + canvasSurface.scrollTop - offY) + 'px';
@@ -2561,16 +2772,26 @@
   });
   document.addEventListener('touchmove', e => {
     if (!dragEl) return;
+    dragMoved = true;
     const t = e.touches[0];
     const surfaceRect = canvasSurface.getBoundingClientRect();
     dragEl.style.left = (t.clientX - surfaceRect.left + canvasSurface.scrollLeft - offX) + 'px';
     dragEl.style.top = (t.clientY - surfaceRect.top + canvasSurface.scrollTop - offY) + 'px';
     e.preventDefault();
   }, { passive: false });
-  document.addEventListener('mouseup', () => { if (dragEl) dragEl.style.zIndex = ''; dragEl = null; });
-  document.addEventListener('touchend', () => { if (dragEl) dragEl.style.zIndex = ''; dragEl = null; });
+  document.addEventListener('mouseup', () => { if (dragEl) dragEl.style.zIndex = ''; dragEl = null; dragMoved = false; });
+  document.addEventListener('touchend', () => { if (dragEl) dragEl.style.zIndex = ''; dragEl = null; dragMoved = false; });
 
   document.querySelectorAll('.sticky, .shape, .text-el, .img-card, .mm-node').forEach(attachInteractions);
+  // Frames and shapes get resize handles
+  document.querySelectorAll('.frame, .shape, .img-card').forEach(el => {
+    attachResizeHandles(el);
+    if (el.classList.contains('frame') && !el.dataset.frame) {
+      el.dataset.frame = '1';
+      el.style.pointerEvents = 'auto';
+      attachInteractions(el);
+    }
+  });
 
   function setSelectedColor(cls, hex, ev) {
     if (!selectedEl) return;
@@ -2697,11 +2918,177 @@
     sh.style.left = (canvasSurface.scrollLeft + 300) + 'px';
     sh.style.top = (canvasSurface.scrollTop + 250) + 'px';
     sh.style.background = currentShapeColor;
-    sh.innerHTML = '<span>Label</span>';
+    sh.innerHTML = '<span class="shape-label" ondblclick="event.stopPropagation(); makeEditable(this)">Label</span>';
     canvasSurface.appendChild(sh);
+    attachResizeHandles(sh);
     attachInteractions(sh);
     selectElement(sh);
     closeAllFlyouts();
+  }
+
+  // ===== EDITABLE TITLES =====
+  // Used by board name, frame labels, shape labels, etc.
+  function makeEditable(el) {
+    if (el.isContentEditable) return;
+    el.contentEditable = 'true';
+    el.classList.add('is-editing');
+    el.focus();
+    // Select all the current text so typing replaces it
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    el.addEventListener('blur', () => {
+      el.contentEditable = 'false';
+      el.classList.remove('is-editing');
+    }, { once: true });
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+      if (e.key === 'Escape') { e.preventDefault(); el.blur(); }
+    });
+  }
+
+  // ===== FRAMES (Miro-style) =====
+  const FRAME_PRESETS = {
+    custom: { w: 580, h: 320, label: 'Frame' },
+    fhd: { w: 1920 / 2, h: 1080 / 2, label: '1080p · 16:9' },
+    a4l: { w: 842 / 1.2, h: 595 / 1.2, label: 'A4 · landscape' },
+    a4p: { w: 595 / 1.2, h: 842 / 1.2, label: 'A4 · portrait' },
+    sq: { w: 600, h: 600, label: 'Square · 1:1' },
+    classic: { w: 1024 / 1.5, h: 768 / 1.5, label: '4:3 · classic' }
+  };
+
+  function addFrame(presetKey = 'custom') {
+    const preset = FRAME_PRESETS[presetKey] || FRAME_PRESETS.custom;
+    const frame = document.createElement('div');
+    frame.className = 'frame';
+    frame.style.left = (canvasSurface.scrollLeft + 200) + 'px';
+    frame.style.top = (canvasSurface.scrollTop + 120) + 'px';
+    frame.style.width = preset.w + 'px';
+    frame.style.height = preset.h + 'px';
+    frame.style.pointerEvents = 'auto'; // make it draggable & selectable
+    frame.dataset.frame = '1';
+    frame.innerHTML = `<div class="frame-label editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">◆ ${preset.label}</div>`;
+    canvasSurface.appendChild(frame);
+    attachResizeHandles(frame);
+    attachInteractions(frame);
+    selectElement(frame);
+    closeAllFlyouts();
+    showToast(`Frame added: ${preset.label}`);
+  }
+
+  // ===== RESIZE HANDLES =====
+  // Adds 8 corner+edge handles to any element.
+  function attachResizeHandles(el) {
+    if (el.dataset.resizable === '1') return;
+    el.dataset.resizable = '1';
+    const handles = ['nw','n','ne','e','se','s','sw','w'];
+    handles.forEach(dir => {
+      const h = document.createElement('div');
+      h.className = `resize-handle handle-${dir}`;
+      h.dataset.dir = dir;
+      h.addEventListener('mousedown', e => startResize(el, dir, e));
+      h.addEventListener('touchstart', e => {
+        const t = e.touches[0];
+        startResize(el, dir, { clientX: t.clientX, clientY: t.clientY, preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation() });
+      }, { passive: false });
+      el.appendChild(h);
+    });
+  }
+
+  let resizeEl = null, resizeDir = '', resizeStart = null;
+  function startResize(el, dir, e) {
+    resizeEl = el;
+    resizeDir = dir;
+    const r = el.getBoundingClientRect();
+    const surfaceRect = canvasSurface.getBoundingClientRect();
+    resizeStart = {
+      mx: e.clientX,
+      my: e.clientY,
+      left: r.left - surfaceRect.left + canvasSurface.scrollLeft,
+      top: r.top - surfaceRect.top + canvasSurface.scrollTop,
+      width: r.width,
+      height: r.height
+    };
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  document.addEventListener('mousemove', e => {
+    if (!resizeEl) return;
+    doResize(e.clientX, e.clientY);
+  });
+  document.addEventListener('touchmove', e => {
+    if (!resizeEl) return;
+    const t = e.touches[0];
+    doResize(t.clientX, t.clientY);
+    e.preventDefault();
+  }, { passive: false });
+  function doResize(mx, my) {
+    const dx = mx - resizeStart.mx;
+    const dy = my - resizeStart.my;
+    let { left, top, width, height } = resizeStart;
+    if (resizeDir.includes('e')) width = Math.max(40, resizeStart.width + dx);
+    if (resizeDir.includes('s')) height = Math.max(40, resizeStart.height + dy);
+    if (resizeDir.includes('w')) {
+      width = Math.max(40, resizeStart.width - dx);
+      left = resizeStart.left + (resizeStart.width - width);
+    }
+    if (resizeDir.includes('n')) {
+      height = Math.max(40, resizeStart.height - dy);
+      top = resizeStart.top + (resizeStart.height - height);
+    }
+    resizeEl.style.left = left + 'px';
+    resizeEl.style.top = top + 'px';
+    resizeEl.style.width = width + 'px';
+    resizeEl.style.height = height + 'px';
+    if (selectedEl === resizeEl) showCtxMenu(resizeEl);
+  }
+  document.addEventListener('mouseup', () => { resizeEl = null; });
+  document.addEventListener('touchend', () => { resizeEl = null; });
+
+  // ===== CUSTOM COLOUR PICKER =====
+  // Opens the native HTML5 colour picker and applies the chosen colour to the
+  // current target (sticky / shape / pen / text). Caller passes a callback.
+  function openCustomColorPicker(currentHex, onPick) {
+    let input = document.getElementById('custom-color-input');
+    if (!input) {
+      input = document.createElement('input');
+      input.type = 'color';
+      input.id = 'custom-color-input';
+      input.style.cssText = 'position:fixed;top:-100px;left:-100px;opacity:0;pointer-events:none;';
+      document.body.appendChild(input);
+    }
+    input.value = currentHex || '#6366f1';
+    input.onchange = () => onPick(input.value);
+    input.click();
+  }
+
+  function applyCustomShapeColor(hex) {
+    currentShapeColor = hex;
+    showToast('Custom colour selected for shapes');
+  }
+  function applyCustomPenColor(hex) {
+    penColor = hex;
+    document.querySelectorAll('#flyout-pen .color-swatch').forEach(s => s.classList.remove('active'));
+    showToast('Custom pen colour set');
+  }
+  function applyCustomStickyColor(hex) {
+    if (!selectedEl) { showToast('Select a sticky/shape first'); return; }
+    if (selectedEl.classList.contains('sticky')) {
+      ['s-yellow','s-pink','s-blue','s-lilac','s-lime','s-peach','s-mint','s-white'].forEach(c => selectedEl.classList.remove(c));
+      selectedEl.style.background = hex;
+    } else {
+      selectedEl.style.background = hex;
+    }
+    document.querySelectorAll('.ctx-color').forEach(c => c.classList.remove('active'));
+  }
+
+  // ===== FRAME PRESET MENU =====
+  function toggleFrameMenu() {
+    const m = document.getElementById('frame-menu');
+    document.querySelectorAll('.flyout').forEach(f => { if (f !== m) f.classList.remove('open'); });
+    m.classList.toggle('open');
   }
 
   // PEN
@@ -2721,6 +3108,15 @@
     penColor = hex;
     document.querySelectorAll('#flyout-pen .color-swatch').forEach(s => s.classList.remove('active'));
     btn.classList.add('active');
+  }
+  function setShapeColor(hex, btn) {
+    currentShapeColor = hex;
+    document.querySelectorAll('#flyout-shapes .color-swatch').forEach(s => s.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    // If a shape is selected, update it too
+    if (selectedEl && selectedEl.classList.contains('shape')) {
+      selectedEl.style.background = hex;
+    }
   }
   function setPenWidth(w, btn) {
     penWidth = w;
@@ -2792,6 +3188,7 @@
     if (e.key.toLowerCase() === 't') addText();
     if (e.key.toLowerCase() === 's') toggleFlyout('shapes');
     if (e.key.toLowerCase() === 'p') togglePen();
+    if (e.key.toLowerCase() === 'f') toggleFrameMenu();
   });
 
   // Initial state
