@@ -816,6 +816,15 @@
     font-size: 8px;
     text-transform: uppercase;
   }
+  .sticky-tag.editable-title:hover {
+    background: rgba(0,0,0,0.2);
+    cursor: text;
+  }
+  .sticky-tag.editable-title.is-editing {
+    background: rgba(255,255,255,0.7);
+    box-shadow: 0 0 0 1.5px var(--accent);
+    color: #0a0a14;
+  }
   .sticky-content {
     font-weight: 500;
     min-height: 40px;
@@ -2092,16 +2101,16 @@
         </div>
 
         <div class="sticky s-yellow font-sans" style="left: 210px; top: 145px;">
-          <div class="sticky-tags"><span class="sticky-tag">INSIGHT</span></div>
+          <div class="sticky-tags"><span class="sticky-tag editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">INSIGHT</span></div>
           <div class="sticky-content">Players want instant PIX, not email receipts.</div>
         </div>
         <div class="sticky s-pink font-sans" style="left: 400px; top: 160px;">
-          <div class="sticky-tags"><span class="sticky-tag">PROBLEM</span></div>
+          <div class="sticky-tags"><span class="sticky-tag editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">PROBLEM</span></div>
           <span class="sticky-emoji">⚠️</span>
           <div class="sticky-content">Curaçao licence limits BR processors.</div>
         </div>
         <div class="sticky s-blue font-sans" style="left: 590px; top: 145px;">
-          <div class="sticky-tags"><span class="sticky-tag">OPPORTUNITY</span></div>
+          <div class="sticky-tags"><span class="sticky-tag editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">OPPORTUNITY</span></div>
           <div class="sticky-content">Self-exclusion API auto-blocks.</div>
         </div>
         <div class="sticky s-lime font-hand" style="left: 250px; top: 280px;">
@@ -2109,20 +2118,20 @@
           <div class="sticky-content">Tier emails by KYC level!</div>
         </div>
         <div class="sticky s-lilac font-sans" style="left: 470px; top: 290px;">
-          <div class="sticky-tags"><span class="sticky-tag">QUESTION</span></div>
+          <div class="sticky-tags"><span class="sticky-tag editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">QUESTION</span></div>
           <div class="sticky-content">Retention post self-exclusion?</div>
         </div>
 
         <div class="sticky s-peach font-sans" style="left: 210px; top: 460px;">
-          <div class="sticky-tags"><span class="sticky-tag">IDEA</span></div>
+          <div class="sticky-tags"><span class="sticky-tag editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">IDEA</span></div>
           <div class="sticky-content">Use WhatsApp Business for follow-ups in BR.</div>
         </div>
         <div class="sticky s-mint font-sans" style="left: 400px; top: 460px;">
-          <div class="sticky-tags"><span class="sticky-tag">RISK</span></div>
+          <div class="sticky-tags"><span class="sticky-tag editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">RISK</span></div>
           <div class="sticky-content">GDPR breach if KYC data sits on US servers.</div>
         </div>
         <div class="sticky s-blue font-sans" style="left: 590px; top: 460px;">
-          <div class="sticky-tags"><span class="sticky-tag">INSIGHT</span></div>
+          <div class="sticky-tags"><span class="sticky-tag editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">INSIGHT</span></div>
           <div class="sticky-content">Mobile traffic is 87% of BR sessions.</div>
         </div>
       </div>
@@ -3073,7 +3082,7 @@
     s.className = `sticky ${color} font-sans`;
     s.style.left = (canvasSurface.scrollLeft + 200 + Math.random() * 80) + 'px';
     s.style.top = (canvasSurface.scrollTop + 150 + Math.random() * 80) + 'px';
-    s.innerHTML = `<div class="sticky-tags"><span class="sticky-tag">NEW</span></div><div class="sticky-content">Type here...</div>`;
+    s.innerHTML = `<div class="sticky-tags"><span class="sticky-tag editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">NEW</span></div><div class="sticky-content">Type here...</div>`;
     canvasSurface.appendChild(s);
     attachInteractions(s);
     attachAnchors(s);
