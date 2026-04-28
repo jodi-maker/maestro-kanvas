@@ -444,47 +444,54 @@
   }
   .connector-label.placeholder { color: var(--ink-soft); font-style: italic; }
 
-  /* ===== ANCHOR DOTS (shown on hover) ===== */
+  /* ===== ANCHOR DOTS (faintly visible always, fully on hover) ===== */
   .anchor-dot {
     position: absolute;
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     background: var(--accent);
     border: 2px solid var(--surface);
     border-radius: 50%;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    z-index: 6;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.5);
+    z-index: 20;
     cursor: crosshair;
-    opacity: 0;
-    transition: opacity 0.15s, transform 0.15s;
+    opacity: 0.35;
+    transition: opacity 0.15s, background 0.15s, box-shadow 0.15s, width 0.15s, height 0.15s;
     pointer-events: auto;
   }
-  .sticky:hover .anchor-dot,
-  .shape:hover .anchor-dot,
+  /* Position via margins (not transforms) so :hover scaling doesn't conflict */
+  .anchor-n { top: -7px; left: calc(50% - 7px); }
+  .anchor-e { right: -7px; top: calc(50% - 7px); }
+  .anchor-s { bottom: -7px; left: calc(50% - 7px); }
+  .anchor-w { left: -7px; top: calc(50% - 7px); }
+
+  /* Fully visible when parent is hovered or selected, or when drawing */
+  .sticky:hover > .anchor-dot,
+  .shape:hover > .anchor-dot,
   .frame:hover > .anchor-dot,
-  .img-card:hover .anchor-dot,
+  .img-card:hover > .anchor-dot,
+  .sticky.selected > .anchor-dot,
+  .shape.selected > .anchor-dot,
+  .frame.selected > .anchor-dot,
+  .img-card.selected > .anchor-dot,
   .anchor-dot.show,
-  .selected > .anchor-dot {
+  .anchor-dot:hover {
     opacity: 1;
   }
   .anchor-dot:hover {
-    transform: scale(1.4);
     background: var(--gradient-1);
+    box-shadow: 0 4px 14px rgba(168,85,247,0.7);
+    width: 18px;
+    height: 18px;
   }
+  .anchor-n:hover { left: calc(50% - 9px); top: -9px; }
+  .anchor-e:hover { right: -9px; top: calc(50% - 9px); }
+  .anchor-s:hover { bottom: -9px; left: calc(50% - 9px); }
+  .anchor-w:hover { left: -9px; top: calc(50% - 9px); }
   .anchor-dot.connecting {
     opacity: 1;
-    transform: scale(1.3);
     background: var(--gradient-1);
   }
-  /* Position the four anchor dots on each side */
-  .anchor-n { top: -6px; left: 50%; transform: translateX(-50%); }
-  .anchor-e { top: 50%; right: -6px; transform: translateY(-50%); }
-  .anchor-s { bottom: -6px; left: 50%; transform: translateX(-50%); }
-  .anchor-w { top: 50%; left: -6px; transform: translateY(-50%); }
-  .anchor-n:hover { transform: translateX(-50%) scale(1.4); }
-  .anchor-e:hover { transform: translateY(-50%) scale(1.4); }
-  .anchor-s:hover { transform: translateX(-50%) scale(1.4); }
-  .anchor-w:hover { transform: translateY(-50%) scale(1.4); }
 
   /* Connector context menu */
   .connector-ctx {
