@@ -1001,12 +1001,18 @@
     pointer-events: none;
     z-index: 1;
     cursor: move;
+    background: transparent;
   }
-  .frame[data-frame="1"] { pointer-events: auto; }
+  .frame[data-frame="1"] {
+    pointer-events: auto;
+    /* A nearly-invisible background so the entire frame area catches clicks.
+       Without this, only the dashed border line is clickable. */
+    background-color: rgba(99,102,241,0.005);
+  }
   .frame > * { pointer-events: auto; }
+  /* Selection ring is added on the OUTSIDE so it doesn't fight the user's border */
   .frame.selected {
-    border-color: var(--accent);
-    border-style: solid;
+    box-shadow: 0 0 0 2px var(--accent), 0 0 0 5px var(--accent-soft);
   }
   .frame-label {
     position: absolute;
@@ -3081,6 +3087,9 @@
       selectElement(el);
     }, { passive: false });
     el.addEventListener('dblclick', e => {
+      // Frames and shapes have their own .editable-title labels which handle their own dblclick.
+      // Don't try to edit the whole frame/shape body.
+      if (el.classList.contains('frame') || el.classList.contains('shape')) return;
       const c = el.querySelector('.sticky-content') || el;
       if (c.isContentEditable) return;
       c.contentEditable = 'true';
@@ -3228,6 +3237,12 @@
     if (!selectedEl) { showToast('Select a shape or frame first'); return; }
     if (!selectedEl.matches('.shape, .frame')) {
       showToast('Border options work on shapes and frames');
+      return;
+    }
+    // Clip-path shapes don't support borders (triangle, hexagon, star, arrow, parallelogram)
+    const noBorderShapes = ['sh-triangle','sh-hexagon','sh-star','sh-arrow','sh-parallelogram'];
+    if (noBorderShapes.some(c => selectedEl.classList.contains(c))) {
+      showToast('Borders not available for this shape — try a rectangle, oval, or rounded shape');
       return;
     }
     document.getElementById('border-popover').classList.toggle('open');
