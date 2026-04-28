@@ -382,6 +382,142 @@
   }
   .canvas-surface.pen-mode .pen-layer { pointer-events: auto; }
 
+  /* ===== CONNECTOR LAYER ===== */
+  .connector-layer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 3000px;
+    height: 2000px;
+    pointer-events: none;
+    z-index: 2;
+    overflow: visible;
+  }
+  .connector-path {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2;
+    pointer-events: stroke;
+    cursor: pointer;
+    transition: stroke-width 0.12s;
+  }
+  .connector-path:hover { stroke-width: 3.5; }
+  .connector-path.selected {
+    stroke: var(--gradient-1);
+    stroke-width: 3;
+    filter: drop-shadow(0 0 6px var(--accent));
+  }
+  .connector-hit {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 14;
+    pointer-events: stroke;
+    cursor: pointer;
+  }
+  .connector-label {
+    position: absolute;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    color: var(--ink);
+    font-size: 11.5px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 14px;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+    cursor: text;
+    outline: none;
+    z-index: 4;
+    white-space: nowrap;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .connector-label:hover { border-color: var(--accent); }
+  .connector-label[contenteditable="true"] {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    user-select: text;
+    -webkit-user-select: text;
+    box-shadow: 0 0 0 2px var(--accent);
+    overflow: visible;
+    text-overflow: clip;
+  }
+  .connector-label.placeholder { color: var(--ink-soft); font-style: italic; }
+
+  /* ===== ANCHOR DOTS (shown on hover) ===== */
+  .anchor-dot {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: var(--accent);
+    border: 2px solid var(--surface);
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    z-index: 6;
+    cursor: crosshair;
+    opacity: 0;
+    transition: opacity 0.15s, transform 0.15s;
+    pointer-events: auto;
+  }
+  .sticky:hover .anchor-dot,
+  .shape:hover .anchor-dot,
+  .frame:hover > .anchor-dot,
+  .img-card:hover .anchor-dot,
+  .anchor-dot.show,
+  .selected > .anchor-dot {
+    opacity: 1;
+  }
+  .anchor-dot:hover {
+    transform: scale(1.4);
+    background: var(--gradient-1);
+  }
+  .anchor-dot.connecting {
+    opacity: 1;
+    transform: scale(1.3);
+    background: var(--gradient-1);
+  }
+  /* Position the four anchor dots on each side */
+  .anchor-n { top: -6px; left: 50%; transform: translateX(-50%); }
+  .anchor-e { top: 50%; right: -6px; transform: translateY(-50%); }
+  .anchor-s { bottom: -6px; left: 50%; transform: translateX(-50%); }
+  .anchor-w { top: 50%; left: -6px; transform: translateY(-50%); }
+  .anchor-n:hover { transform: translateX(-50%) scale(1.4); }
+  .anchor-e:hover { transform: translateY(-50%) scale(1.4); }
+  .anchor-s:hover { transform: translateX(-50%) scale(1.4); }
+  .anchor-w:hover { transform: translateY(-50%) scale(1.4); }
+
+  /* Connector context menu */
+  .connector-ctx {
+    position: absolute;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    padding: 4px;
+    display: none;
+    gap: 2px;
+    z-index: 50;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+    backdrop-filter: blur(20px);
+  }
+  .connector-ctx.open { display: flex; align-items: center; }
+  .connector-ctx-btn {
+    background: transparent;
+    border: none;
+    color: var(--ink);
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: all 0.12s;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .connector-ctx-btn:hover { background: var(--surface-2); color: var(--accent-hover); }
+  .connector-ctx-btn.active { background: var(--accent-soft); color: var(--accent-hover); }
+  .connector-ctx-btn.danger:hover { background: rgba(244,63,94,0.15); color: #f43f5e; }
+  .connector-divider { width: 1px; height: 22px; background: var(--line-strong); margin: 0 3px; }
+
   .toolbar {
     position: absolute;
     left: 14px;
@@ -1876,6 +2012,33 @@
       </div>
 
       <!-- CTX MENU -->
+      <!-- CONNECTOR CTX MENU -->
+      <div class="connector-ctx" id="connector-ctx">
+        <button class="connector-ctx-btn" data-style="curved" onclick="setConnectorStyle('curved')" title="Curved">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12 C 6 4, 10 4, 14 12"/></svg>
+        </button>
+        <button class="connector-ctx-btn" data-style="straight" onclick="setConnectorStyle('straight')" title="Straight">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12 L 14 4"/></svg>
+        </button>
+        <button class="connector-ctx-btn" data-style="elbow" onclick="setConnectorStyle('elbow')" title="Elbow">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12 L 8 12 L 8 4 L 14 4"/></svg>
+        </button>
+        <div class="connector-divider"></div>
+        <button class="connector-ctx-btn" onclick="toggleConnectorArrow('start')" title="Toggle start arrow">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 8 L 2 8 M 5 5 L 2 8 L 5 11"/></svg>
+        </button>
+        <button class="connector-ctx-btn" onclick="toggleConnectorArrow('end')" title="Toggle end arrow">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8 L 14 8 M 11 5 L 14 8 L 11 11"/></svg>
+        </button>
+        <div class="connector-divider"></div>
+        <button class="connector-ctx-btn" onclick="addConnectorLabel()" title="Add label">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h10M5 8h6M3 11h10"/></svg>
+        </button>
+        <button class="connector-ctx-btn danger" onclick="deleteSelectedConnector()" title="Delete">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M6 4V2h4v2M5 4l1 10h4l1-10"/></svg>
+        </button>
+      </div>
+
       <div class="ctx-menu" id="ctx-menu">
         <div class="ctx-color-row">
           <div class="ctx-color" style="background:#fff3a0;" onclick="setSelectedColor('s-yellow','#fff3a0',event)"></div>
@@ -1905,6 +2068,16 @@
       </div>
 
       <div class="canvas-surface" id="canvas-surface">
+        <svg class="connector-layer" id="connector-layer" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+            </marker>
+            <marker id="arrowhead-start" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 10 0 L 0 5 L 10 10 z" fill="var(--accent)"/>
+            </marker>
+          </defs>
+        </svg>
         <svg class="pen-layer" id="pen-layer" xmlns="http://www.w3.org/2000/svg"></svg>
 
         <div class="frame" style="left: 180px; top: 100px; width: 580px; height: 270px;">
@@ -2682,13 +2855,13 @@
       // If the user clicked on something interactive inside the sticky (a link,
       // editable content, button), don't start a drag — let the browser handle
       // text selection/focus/clicks naturally.
-      if (e.target.closest('a, button, [contenteditable="true"]')) return;
+      if (e.target.closest('a, button, [contenteditable="true"], .anchor-dot, .resize-handle')) return;
       startDrag(el, e);
       selectElement(el);
     });
     el.addEventListener('touchstart', e => {
       if (penActive) return;
-      if (e.target.closest('a, button, [contenteditable="true"]')) return;
+      if (e.target.closest('a, button, [contenteditable="true"], .anchor-dot, .resize-handle')) return;
       const t = e.touches[0];
       startDrag(el, { clientX: t.clientX, clientY: t.clientY, preventDefault: () => e.preventDefault() });
       selectElement(el);
@@ -2769,6 +2942,7 @@
     dragEl.style.left = (e.clientX - surfaceRect.left + canvasSurface.scrollLeft - offX) + 'px';
     dragEl.style.top = (e.clientY - surfaceRect.top + canvasSurface.scrollTop - offY) + 'px';
     if (selectedEl === dragEl) showCtxMenu(dragEl);
+    renderAllConnectors();
   });
   document.addEventListener('touchmove', e => {
     if (!dragEl) return;
@@ -2778,6 +2952,7 @@
     dragEl.style.left = (t.clientX - surfaceRect.left + canvasSurface.scrollLeft - offX) + 'px';
     dragEl.style.top = (t.clientY - surfaceRect.top + canvasSurface.scrollTop - offY) + 'px';
     e.preventDefault();
+    renderAllConnectors();
   }, { passive: false });
   document.addEventListener('mouseup', () => { if (dragEl) dragEl.style.zIndex = ''; dragEl = null; dragMoved = false; });
   document.addEventListener('touchend', () => { if (dragEl) dragEl.style.zIndex = ''; dragEl = null; dragMoved = false; });
@@ -2792,6 +2967,8 @@
       attachInteractions(el);
     }
   });
+  // Anchor dots for connectors — sticky/shape/frame/img-card all get them
+  document.querySelectorAll('.sticky, .shape, .frame, .img-card').forEach(attachAnchors);
 
   function setSelectedColor(cls, hex, ev) {
     if (!selectedEl) return;
@@ -2885,6 +3062,7 @@
     s.innerHTML = `<div class="sticky-tags"><span class="sticky-tag">NEW</span></div><div class="sticky-content">Type here...</div>`;
     canvasSurface.appendChild(s);
     attachInteractions(s);
+    attachAnchors(s);
     selectElement(s);
     // Auto-focus into edit mode for the new sticky so user can type immediately.
     const content = s.querySelector('.sticky-content');
@@ -2922,6 +3100,7 @@
     canvasSurface.appendChild(sh);
     attachResizeHandles(sh);
     attachInteractions(sh);
+    attachAnchors(sh);
     selectElement(sh);
     closeAllFlyouts();
   }
@@ -2973,6 +3152,7 @@
     canvasSurface.appendChild(frame);
     attachResizeHandles(frame);
     attachInteractions(frame);
+    attachAnchors(frame);
     selectElement(frame);
     closeAllFlyouts();
     showToast(`Frame added: ${preset.label}`);
@@ -3043,6 +3223,7 @@
     resizeEl.style.width = width + 'px';
     resizeEl.style.height = height + 'px';
     if (selectedEl === resizeEl) showCtxMenu(resizeEl);
+    renderAllConnectors();
   }
   document.addEventListener('mouseup', () => { resizeEl = null; });
   document.addEventListener('touchend', () => { resizeEl = null; });
@@ -3090,6 +3271,315 @@
     document.querySelectorAll('.flyout').forEach(f => { if (f !== m) f.classList.remove('open'); });
     m.classList.toggle('open');
   }
+
+  // =====================================================================
+  // ===== CONNECTORS (Miro-style) =====
+  // =====================================================================
+  // Data model: each connector is { id, fromId, fromAnchor, toId, toAnchor,
+  //   style: 'curved'|'straight'|'elbow', arrowStart, arrowEnd, label }
+  // We keep a global registry and re-render on any element movement.
+
+  const connectors = []; // active connectors
+  let connectorIdSeq = 1;
+  let selectedConnector = null;
+  const connectorLayer = document.getElementById('connector-layer');
+
+  // Make every connectable element have a stable id we can reference.
+  function ensureElId(el) {
+    if (!el.dataset.kid) el.dataset.kid = 'el-' + (connectorIdSeq++);
+    return el.dataset.kid;
+  }
+
+  // Add 4 anchor dots to an element
+  function attachAnchors(el) {
+    if (el.dataset.anchored === '1') return;
+    el.dataset.anchored = '1';
+    ensureElId(el);
+    ['n','e','s','w'].forEach(side => {
+      const dot = document.createElement('div');
+      dot.className = `anchor-dot anchor-${side}`;
+      dot.dataset.anchor = side;
+      dot.addEventListener('mousedown', e => startConnectorDraw(el, side, e));
+      dot.addEventListener('touchstart', e => {
+        const t = e.touches[0];
+        startConnectorDraw(el, side, { clientX: t.clientX, clientY: t.clientY, preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation() });
+      }, { passive: false });
+      el.appendChild(dot);
+    });
+  }
+
+  // Get the centre of an anchor side in canvas-surface coordinates
+  function getAnchorPoint(el, side) {
+    const r = el.getBoundingClientRect();
+    const sr = canvasSurface.getBoundingClientRect();
+    const left = r.left - sr.left + canvasSurface.scrollLeft;
+    const top = r.top - sr.top + canvasSurface.scrollTop;
+    switch (side) {
+      case 'n': return { x: left + r.width / 2, y: top };
+      case 'e': return { x: left + r.width, y: top + r.height / 2 };
+      case 's': return { x: left + r.width / 2, y: top + r.height };
+      case 'w': return { x: left, y: top + r.height / 2 };
+    }
+  }
+
+  // Compute SVG path based on style
+  function buildConnectorPath(p1, p2, style) {
+    if (style === 'straight') {
+      return `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
+    }
+    if (style === 'elbow') {
+      const midX = (p1.x + p2.x) / 2;
+      return `M ${p1.x} ${p1.y} L ${midX} ${p1.y} L ${midX} ${p2.y} L ${p2.x} ${p2.y}`;
+    }
+    // curved (default) — bezier with horizontal control points
+    const dx = Math.abs(p2.x - p1.x);
+    const dy = Math.abs(p2.y - p1.y);
+    const offset = Math.max(50, Math.min(dx, 200));
+    let c1x = p1.x, c1y = p1.y, c2x = p2.x, c2y = p2.y;
+    // Pull control points outward from each anchor side to make the curve feel natural
+    return `M ${p1.x} ${p1.y} C ${p1.x + (p2.x - p1.x) * 0.5} ${p1.y}, ${p1.x + (p2.x - p1.x) * 0.5} ${p2.y}, ${p2.x} ${p2.y}`;
+  }
+
+  // Render (or re-render) a single connector
+  function renderConnector(conn) {
+    const fromEl = document.querySelector(`[data-kid="${conn.fromId}"]`);
+    const p1 = fromEl ? getAnchorPoint(fromEl, conn.fromAnchor) : conn._dragP1;
+    let p2;
+    if (conn.toId) {
+      const toEl = document.querySelector(`[data-kid="${conn.toId}"]`);
+      p2 = toEl ? getAnchorPoint(toEl, conn.toAnchor) : conn._dragP2;
+    } else {
+      p2 = conn._dragP2;
+    }
+    if (!p1 || !p2) return;
+
+    const d = buildConnectorPath(p1, p2, conn.style);
+    if (!conn._pathEl) {
+      // Create both the visible path and an invisible thick hit-target
+      const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      hit.setAttribute('class', 'connector-hit');
+      hit.dataset.connId = conn.id;
+      hit.addEventListener('click', e => { e.stopPropagation(); selectConnector(conn); });
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('class', 'connector-path');
+      path.dataset.connId = conn.id;
+      connectorLayer.appendChild(hit);
+      connectorLayer.appendChild(path);
+      conn._hitEl = hit;
+      conn._pathEl = path;
+    }
+    conn._hitEl.setAttribute('d', d);
+    conn._pathEl.setAttribute('d', d);
+    conn._pathEl.setAttribute('marker-end', conn.arrowEnd ? 'url(#arrowhead)' : '');
+    conn._pathEl.setAttribute('marker-start', conn.arrowStart ? 'url(#arrowhead-start)' : '');
+    conn._pathEl.classList.toggle('selected', conn === selectedConnector);
+
+    // Position label at midpoint
+    if (conn.label !== undefined) {
+      if (!conn._labelEl) {
+        const label = document.createElement('div');
+        label.className = 'connector-label';
+        label.dataset.connId = conn.id;
+        label.addEventListener('click', e => { e.stopPropagation(); selectConnector(conn); });
+        label.addEventListener('dblclick', e => { e.stopPropagation(); editConnectorLabel(conn); });
+        canvasSurface.appendChild(label);
+        conn._labelEl = label;
+      }
+      conn._labelEl.textContent = conn.label || 'Add label';
+      conn._labelEl.classList.toggle('placeholder', !conn.label);
+      const mid = midpointOnPath(p1, p2, conn.style);
+      conn._labelEl.style.left = mid.x + 'px';
+      conn._labelEl.style.top = mid.y + 'px';
+    }
+  }
+
+  function midpointOnPath(p1, p2, style) {
+    if (style === 'elbow') {
+      return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    }
+    return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+  }
+
+  // Re-render all connectors (called when anything moves)
+  function renderAllConnectors() {
+    connectors.forEach(renderConnector);
+  }
+
+  // ===== Drawing a new connector =====
+  let drawingConn = null;
+  function startConnectorDraw(el, anchor, e) {
+    e.stopPropagation();
+    e.preventDefault();
+    ensureElId(el);
+    drawingConn = {
+      id: 'conn-' + (connectorIdSeq++),
+      fromId: el.dataset.kid,
+      fromAnchor: anchor,
+      toId: null,
+      toAnchor: null,
+      style: 'curved',
+      arrowStart: false,
+      arrowEnd: true,
+      _dragP2: { x: e.clientX, y: e.clientY }
+    };
+    // Convert mouse to canvas coords
+    const sr = canvasSurface.getBoundingClientRect();
+    drawingConn._dragP2 = {
+      x: e.clientX - sr.left + canvasSurface.scrollLeft,
+      y: e.clientY - sr.top + canvasSurface.scrollTop
+    };
+    connectors.push(drawingConn);
+    renderConnector(drawingConn);
+    // Show all anchor dots while drawing so user sees valid drop targets
+    document.querySelectorAll('.anchor-dot').forEach(d => d.classList.add('show'));
+    document.body.style.cursor = 'crosshair';
+  }
+
+  document.addEventListener('mousemove', e => {
+    if (!drawingConn) return;
+    const sr = canvasSurface.getBoundingClientRect();
+    drawingConn._dragP2 = {
+      x: e.clientX - sr.left + canvasSurface.scrollLeft,
+      y: e.clientY - sr.top + canvasSurface.scrollTop
+    };
+    renderConnector(drawingConn);
+  });
+
+  document.addEventListener('mouseup', e => {
+    if (!drawingConn) return;
+    // Find anchor under mouse
+    const target = document.elementFromPoint(e.clientX, e.clientY);
+    if (target && target.classList.contains('anchor-dot')) {
+      const targetEl = target.parentElement;
+      ensureElId(targetEl);
+      drawingConn.toId = targetEl.dataset.kid;
+      drawingConn.toAnchor = target.dataset.anchor;
+      delete drawingConn._dragP2;
+      renderConnector(drawingConn);
+      showToast('Connector created');
+      selectConnector(drawingConn);
+    } else {
+      // Drop in empty space — discard the connector
+      if (drawingConn._pathEl) drawingConn._pathEl.remove();
+      if (drawingConn._hitEl) drawingConn._hitEl.remove();
+      const idx = connectors.indexOf(drawingConn);
+      if (idx >= 0) connectors.splice(idx, 1);
+    }
+    drawingConn = null;
+    document.querySelectorAll('.anchor-dot').forEach(d => d.classList.remove('show'));
+    document.body.style.cursor = '';
+  });
+
+  // ===== Connector selection + ctx menu =====
+  function selectConnector(conn) {
+    deselect(); // clear any selected element
+    selectedConnector = conn;
+    connectors.forEach(c => c._pathEl?.classList.toggle('selected', c === conn));
+    showConnectorCtx(conn);
+  }
+
+  function deselectConnector() {
+    selectedConnector = null;
+    connectors.forEach(c => c._pathEl?.classList.remove('selected'));
+    document.getElementById('connector-ctx').classList.remove('open');
+  }
+
+  function showConnectorCtx(conn) {
+    const menu = document.getElementById('connector-ctx');
+    menu.classList.add('open');
+    // Position above the connector midpoint
+    const fromEl = document.querySelector(`[data-kid="${conn.fromId}"]`);
+    const toEl = document.querySelector(`[data-kid="${conn.toId}"]`);
+    if (fromEl && toEl) {
+      const p1 = getAnchorPoint(fromEl, conn.fromAnchor);
+      const p2 = getAnchorPoint(toEl, conn.toAnchor);
+      const mid = midpointOnPath(p1, p2, conn.style);
+      menu.style.left = Math.max(8, mid.x - 100) + 'px';
+      menu.style.top = Math.max(8, mid.y - 50) + 'px';
+    }
+    // Reflect current style in active button
+    menu.querySelectorAll('[data-style]').forEach(b => {
+      b.classList.toggle('active', b.dataset.style === conn.style);
+    });
+  }
+
+  function setConnectorStyle(style) {
+    if (!selectedConnector) return;
+    selectedConnector.style = style;
+    renderConnector(selectedConnector);
+    showConnectorCtx(selectedConnector);
+  }
+
+  function toggleConnectorArrow(end) {
+    if (!selectedConnector) return;
+    if (end === 'start') selectedConnector.arrowStart = !selectedConnector.arrowStart;
+    if (end === 'end') selectedConnector.arrowEnd = !selectedConnector.arrowEnd;
+    renderConnector(selectedConnector);
+  }
+
+  function addConnectorLabel() {
+    if (!selectedConnector) return;
+    if (selectedConnector.label === undefined) selectedConnector.label = '';
+    renderConnector(selectedConnector);
+    editConnectorLabel(selectedConnector);
+  }
+
+  function editConnectorLabel(conn) {
+    if (!conn._labelEl) return;
+    const el = conn._labelEl;
+    el.classList.remove('placeholder');
+    if (el.textContent === 'Add label') el.textContent = '';
+    el.contentEditable = 'true';
+    el.focus();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    const finish = () => {
+      el.contentEditable = 'false';
+      conn.label = el.textContent.trim();
+      if (!conn.label) {
+        el.textContent = 'Add label';
+        el.classList.add('placeholder');
+      }
+    };
+    el.addEventListener('blur', finish, { once: true });
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el.blur(); }
+      if (e.key === 'Escape') { e.preventDefault(); el.blur(); }
+    });
+  }
+
+  function deleteSelectedConnector() {
+    if (!selectedConnector) return;
+    if (selectedConnector._pathEl) selectedConnector._pathEl.remove();
+    if (selectedConnector._hitEl) selectedConnector._hitEl.remove();
+    if (selectedConnector._labelEl) selectedConnector._labelEl.remove();
+    const idx = connectors.indexOf(selectedConnector);
+    if (idx >= 0) connectors.splice(idx, 1);
+    selectedConnector = null;
+    document.getElementById('connector-ctx').classList.remove('open');
+    showToast('Connector deleted');
+  }
+
+  // Click outside any connector or shape clears selection
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.connector-path, .connector-hit, .connector-ctx, .connector-label')) {
+      // only clear connector selection — the regular deselect logic runs separately
+      if (selectedConnector) deselectConnector();
+    }
+  });
+
+  // Delete key while a connector is selected
+  document.addEventListener('keydown', e => {
+    if (e.target.isContentEditable || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if ((e.key === 'Delete' || e.key === 'Backspace') && selectedConnector) {
+      deleteSelectedConnector();
+      e.preventDefault();
+    }
+    if (e.key === 'Escape' && selectedConnector) deselectConnector();
+  });
 
   // PEN
   let penActive = false, penColor = '#0e0e10', penWidth = 2.5, drawing = false, currentPath = null;
@@ -3169,6 +3659,7 @@
     card.innerHTML = `<img src="${url}" alt=""><div class="img-caption">${caption}</div>`;
     canvasSurface.appendChild(card);
     attachInteractions(card);
+    attachAnchors(card);
     selectElement(card);
   }
 
