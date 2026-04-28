@@ -3119,7 +3119,7 @@
   }
 
   document.addEventListener('mousedown', e => {
-    if (!e.target.closest('.sticky, .shape, .text-el, .img-card, .mm-node, .ctx-menu, .flyout, .toolbar, .top-bar-canvas, .mm-toolbar, .mm-toolbar-left, .board-name, .modal, .sidebar, .topbar')) {
+    if (!e.target.closest('.sticky, .shape, .frame, .text-el, .img-card, .mm-node, .ctx-menu, .connector-ctx, .text-color-popover, .border-popover, .flyout, .toolbar, .top-bar-canvas, .mm-toolbar, .mm-toolbar-left, .board-name, .modal, .sidebar, .topbar')) {
       deselect();
       closeAllFlyouts();
     }
