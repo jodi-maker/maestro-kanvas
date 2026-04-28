@@ -1,35 +1,3834 @@
-Good catch — currently the colour swatches only paint backgrounds. Let me add a separate text-colour control.I'll add a single icon button that, when clicked, opens a small text-colour palette inline. Cleaner than cluttering the menu with a second 8-swatch row.Now CSS for the popover:Now the JS. Find a spot near other ctx menu helpers:Sanity check JS:Done. Text colour control is in.
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Maestro Kanvas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* ===== MAESTRO DESIGN TOKENS ===== */
+  [data-theme="dark"] {
+    --ink: #f8f9ff;
+    --ink-soft: #9ca3af;
+    --paper: #000000;
+    --paper-warm: #0a0a0f;
+    --surface: #14141c;
+    --surface-2: #1c1c26;
+    --line: rgba(255,255,255,0.06);
+    --line-strong: rgba(255,255,255,0.12);
+    --grid: rgba(255,255,255,0.04);
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --accent-soft: rgba(99,102,241,0.15);
+    --gradient-1: #a855f7;
+    --gradient-2: #6366f1;
+    --gradient-3: #06b6d4;
+    --gradient: linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-2) 50%, var(--gradient-3) 100%);
+    --glow: 0 0 40px rgba(99,102,241,0.25);
+  }
+  [data-theme="light"] {
+    --ink: #0a0a14;
+    --ink-soft: #6b7280;
+    --paper: #f4f3fc;
+    --paper-warm: #ebe9f7;
+    --surface: #ffffff;
+    --surface-2: #f9f9fd;
+    --line: rgba(10,10,20,0.06);
+    --line-strong: rgba(10,10,20,0.12);
+    --grid: rgba(10,10,20,0.04);
+    --accent: #6366f1;
+    --accent-hover: #4f46e5;
+    --accent-soft: rgba(99,102,241,0.1);
+    --gradient-1: #a855f7;
+    --gradient-2: #6366f1;
+    --gradient-3: #06b6d4;
+    --gradient: linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-2) 50%, var(--gradient-3) 100%);
+    --glow: 0 0 40px rgba(99,102,241,0.15);
+  }
 
-## ✨ How to use it
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.3s, color 0.3s;
+    letter-spacing: -0.005em;
+  }
 
-1. **Click any sticky, shape, or text element** → context menu appears
-2. Look for the **"A"** button with the indigo underline (between Italic and the link icon)
-3. **Click it** → a small popover opens with 10 colour swatches
-4. **Click a colour** → text changes immediately
+  /* Subtle radial vignette behind everything in dark mode */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 30%, rgba(99,102,241,0.08), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  [data-theme="light"] body::before {
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(99,102,241,0.08), transparent 70%);
+  }
 
-## 🎨 What's included
+  /* GRADIENT TEXT utility */
+  .gradient-text {
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
 
-| Swatch | Use |
-|---|---|
-| Black | Default sticky text colour |
-| White | For dark backgrounds |
-| Grey | Secondary / less important text |
-| Indigo · Purple · Cyan · Green · Amber · Red · Pink | Maestro family palette |
-| **+** (rainbow) | Custom HTML5 colour picker — any hex value |
-| **↻** (reset) | Removes the custom colour, returns to default |
+  .app {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    grid-template-rows: 56px 1fr;
+    height: 100vh;
+    position: relative;
+    z-index: 1;
+  }
 
-## 🎯 Where it applies
+  /* ===== TOPBAR ===== */
+  .topbar {
+    grid-column: 1/-1;
+    display: flex;
+    align-items: center;
+    padding: 0 18px;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--line);
+    gap: 14px;
+  }
+  [data-theme="light"] .topbar {
+    background: rgba(255,255,255,0.7);
+  }
 
-The colour change targets the **right element** automatically:
+  .logo {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: -0.025em;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--ink);
+  }
+  .logo-mark {
+    width: 28px; height: 28px;
+    background: var(--gradient);
+    border-radius: 7px;
+    display: grid;
+    place-items: center;
+    font-family: 'Inter', sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    color: white;
+    box-shadow: 0 4px 16px rgba(99,102,241,0.4);
+    letter-spacing: -0.05em;
+  }
 
-- **Stickies** → changes the `.sticky-content` text (not the tag)
-- **Shapes** → changes the shape label
-- **Text elements** → changes the whole text
+  .logo-suffix {
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+  }
 
-Your tag colours, sticky background colours, and the formatting buttons (B/I/A−/A+) all keep working independently.
+  .ai-badge {
+    background: var(--accent-soft);
+    border: 1px solid rgba(99,102,241,0.3);
+    color: var(--accent-hover);
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    text-transform: uppercase;
+  }
+  .ai-badge::before {
+    content: '';
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: #06b6d4;
+    box-shadow: 0 0 8px #06b6d4;
+    animation: pulse-dot 2s infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
 
-## 🚀 Deploy
+  .breadcrumb {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.02em;
+  }
+  .breadcrumb .current { color: var(--ink); font-weight: 500; }
 
-Replace `index.html` in your repo, commit, Cloudflare auto-deploys.
+  .sidebar-toggle {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    color: var(--ink);
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    place-items: center;
+  }
 
-Anything else?
+  .btn {
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    padding: 7px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--ink);
+    white-space: nowrap;
+    transition: all 0.18s ease;
+  }
+  .btn:hover {
+    background: var(--surface);
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+  .btn-primary {
+    background: var(--gradient);
+    color: white;
+    border-color: transparent;
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgba(99,102,241,0.35);
+  }
+  .btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(99,102,241,0.5);
+    transform: translateY(-1px);
+  }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+  .icon-btn {
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    color: var(--ink);
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    position: relative;
+    transition: all 0.18s;
+  }
+  .icon-btn:hover { border-color: var(--accent); color: var(--accent-hover); }
+
+  .ai-status-dot {
+    position: absolute;
+    top: 3px; right: 3px;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #d44a4a;
+    border: 1.5px solid var(--surface);
+  }
+  .ai-status-dot.connected { background: #5bc4a8; }
+
+  /* ===== SIDEBAR ===== */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--line);
+    padding: 18px 0;
+    overflow-y: auto;
+    transition: transform 0.25s;
+  }
+
+  .sidebar-section { padding: 0 12px; margin-bottom: 22px; }
+  .sidebar-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+    padding: 0 10px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--ink);
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+  .nav-item:hover {
+    background: var(--surface-2);
+    transform: translateX(2px);
+  }
+  .nav-item.active {
+    background: var(--accent-soft);
+    color: var(--accent-hover);
+    font-weight: 600;
+  }
+  .nav-item.active::before {
+    content: '';
+    width: 3px;
+    height: 16px;
+    background: var(--gradient);
+    border-radius: 2px;
+    margin-right: -3px;
+    margin-left: -10px;
+  }
+
+  /* ===== MAIN ===== */
+  .main {
+    background: var(--paper);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .view-switcher {
+    display: flex;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--line);
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--paper);
+  }
+
+  .view-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--surface);
+    padding: 4px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .view-tabs::-webkit-scrollbar { display: none; }
+
+  .view-tab {
+    background: transparent;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--ink-soft);
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .view-tab:hover { color: var(--ink); }
+  .view-tab.active {
+    background: var(--gradient);
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.35);
+  }
+
+  .view-panel { display: none; flex: 1; position: relative; overflow: hidden; }
+  .view-panel.active { display: flex; flex-direction: column; }
+
+  /* ===== CANVAS ===== */
+  .canvas-view {
+    background: radial-gradient(circle, var(--grid) 1px, transparent 1px);
+    background-size: 24px 24px;
+    flex: 1;
+    position: relative;
+  }
+
+  .canvas-surface {
+    flex: 1;
+    position: relative;
+    overflow: auto;
+    width: 100%;
+    height: 100%;
+    touch-action: pan-x pan-y;
+  }
+
+  .canvas-surface.pen-mode { cursor: crosshair; }
+
+  .pen-layer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 3000px;
+    height: 2000px;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .canvas-surface.pen-mode .pen-layer { pointer-events: auto; }
+
+  /* ===== CONNECTOR LAYER ===== */
+  .connector-layer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 3000px;
+    height: 2000px;
+    pointer-events: none;
+    z-index: 2;
+    overflow: visible;
+  }
+  .connector-path {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2;
+    pointer-events: stroke;
+    cursor: pointer;
+    transition: stroke-width 0.12s;
+  }
+  .connector-path:hover { stroke-width: 3.5; }
+  .connector-path.selected {
+    stroke: var(--gradient-1);
+    stroke-width: 3;
+    filter: drop-shadow(0 0 6px var(--accent));
+  }
+  .connector-hit {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 14;
+    pointer-events: stroke;
+    cursor: pointer;
+  }
+  .connector-label {
+    position: absolute;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    color: var(--ink);
+    font-size: 11.5px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 14px;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+    cursor: text;
+    outline: none;
+    z-index: 4;
+    white-space: nowrap;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .connector-label:hover { border-color: var(--accent); }
+  .connector-label[contenteditable="true"] {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    user-select: text;
+    -webkit-user-select: text;
+    box-shadow: 0 0 0 2px var(--accent);
+    overflow: visible;
+    text-overflow: clip;
+  }
+  .connector-label.placeholder { color: var(--ink-soft); font-style: italic; }
+
+  /* ===== ANCHOR DOTS (faintly visible always, fully on hover) ===== */
+  .anchor-dot {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: var(--accent);
+    border: 2px solid var(--surface);
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.5);
+    z-index: 20;
+    cursor: crosshair;
+    opacity: 0.35;
+    transition: opacity 0.15s, background 0.15s, box-shadow 0.15s, width 0.15s, height 0.15s;
+    pointer-events: auto;
+  }
+  /* Position via margins (not transforms) so :hover scaling doesn't conflict */
+  .anchor-n { top: -7px; left: calc(50% - 7px); }
+  .anchor-e { right: -7px; top: calc(50% - 7px); }
+  .anchor-s { bottom: -7px; left: calc(50% - 7px); }
+  .anchor-w { left: -7px; top: calc(50% - 7px); }
+
+  /* Fully visible when parent is hovered or selected, or when drawing */
+  .sticky:hover > .anchor-dot,
+  .shape:hover > .anchor-dot,
+  .frame:hover > .anchor-dot,
+  .img-card:hover > .anchor-dot,
+  .sticky.selected > .anchor-dot,
+  .shape.selected > .anchor-dot,
+  .frame.selected > .anchor-dot,
+  .img-card.selected > .anchor-dot,
+  .anchor-dot.show,
+  .anchor-dot:hover {
+    opacity: 1;
+  }
+  .anchor-dot:hover {
+    background: var(--gradient-1);
+    box-shadow: 0 4px 14px rgba(168,85,247,0.7);
+    width: 18px;
+    height: 18px;
+  }
+  .anchor-n:hover { left: calc(50% - 9px); top: -9px; }
+  .anchor-e:hover { right: -9px; top: calc(50% - 9px); }
+  .anchor-s:hover { bottom: -9px; left: calc(50% - 9px); }
+  .anchor-w:hover { left: -9px; top: calc(50% - 9px); }
+  .anchor-dot.connecting {
+    opacity: 1;
+    background: var(--gradient-1);
+  }
+
+  /* Connector context menu */
+  .connector-ctx {
+    position: absolute;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    padding: 4px;
+    display: none;
+    gap: 2px;
+    z-index: 50;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+    backdrop-filter: blur(20px);
+  }
+  .connector-ctx.open { display: flex; align-items: center; }
+  .connector-ctx-btn {
+    background: transparent;
+    border: none;
+    color: var(--ink);
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: all 0.12s;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .connector-ctx-btn:hover { background: var(--surface-2); color: var(--accent-hover); }
+  .connector-ctx-btn.active { background: var(--accent-soft); color: var(--accent-hover); }
+  .connector-ctx-btn.danger:hover { background: rgba(244,63,94,0.15); color: #f43f5e; }
+  .connector-divider { width: 1px; height: 22px; background: var(--line-strong); margin: 0 3px; }
+
+  .toolbar {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 14px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 10;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4), var(--glow);
+    backdrop-filter: blur(20px);
+  }
+
+  .tool {
+    width: 38px; height: 38px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--ink-soft);
+    display: grid;
+    place-items: center;
+    position: relative;
+    transition: all 0.15s;
+  }
+  .tool:hover {
+    background: var(--surface-2);
+    color: var(--ink);
+  }
+  .tool.active {
+    background: var(--gradient);
+    color: white;
+    box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+  }
+
+  .tool-tip {
+    position: absolute;
+    left: 48px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--surface-2);
+    color: var(--ink);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    border: 1px solid var(--line-strong);
+    z-index: 20;
+    transition: opacity 0.15s;
+  }
+  .tool:hover .tool-tip { opacity: 1; }
+
+  .tool-divider { height: 1px; background: var(--line); margin: 4px 6px; }
+
+  /* FLYOUTS */
+  .flyout {
+    position: absolute;
+    left: 64px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    padding: 12px;
+    z-index: 15;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+    display: none;
+    backdrop-filter: blur(20px);
+  }
+  .flyout.open { display: block; }
+
+  .flyout-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+    padding: 0 2px;
+  }
+
+  .shape-grid { display: grid; grid-template-columns: repeat(4, 40px); gap: 5px; }
+  .shape-btn {
+    width: 40px; height: 40px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    color: var(--ink);
+    transition: all 0.15s;
+  }
+  .shape-btn:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+    transform: scale(1.05);
+  }
+
+  .color-row { display: flex; gap: 5px; margin-bottom: 8px; }
+  .color-swatch {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.12s;
+  }
+  .color-swatch:hover { transform: scale(1.15); }
+  .color-swatch.active {
+    border-color: var(--accent-hover);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  .stroke-row { display: flex; gap: 5px; }
+  .stroke-btn {
+    width: 36px; height: 28px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    color: var(--ink);
+  }
+  .stroke-btn.active { background: var(--gradient); border-color: transparent; color: white; }
+
+  /* Custom-colour "+" swatch */
+  .custom-swatch {
+    background: linear-gradient(45deg, #ff5b1f 0%, #a855f7 33%, #6366f1 66%, #06b6d4 100%) !important;
+    color: white !important;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    line-height: 1;
+    border: 2px solid var(--surface) !important;
+    box-shadow: 0 0 0 1px var(--line-strong);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+  }
+  .ctx-color.custom-swatch { width: 18px; height: 18px; border-radius: 50%; padding: 0; font-size: 11px; }
+  .color-swatch.custom-swatch { font-size: 13px; }
+
+  /* Frame preset grid */
+  .frame-preset-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    width: 220px;
+  }
+  .frame-preset {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px;
+    cursor: pointer;
+    color: var(--ink);
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .frame-preset:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    transform: translateY(-1px);
+  }
+  .fp-icon {
+    width: 100%;
+    background: var(--line-strong);
+    border: 1px dashed var(--line-strong);
+    border-radius: 4px;
+    margin-bottom: 5px;
+    max-height: 50px;
+  }
+  .fp-label {
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+
+  .top-bar-canvas {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+  }
+
+  .action-chip {
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    color: var(--ink);
+    padding: 8px 14px;
+    border-radius: 9px;
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    backdrop-filter: blur(10px);
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .action-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent-hover);
+    transform: translateY(-1px);
+  }
+  .action-chip.primary {
+    background: var(--gradient);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 14px rgba(99,102,241,0.35);
+  }
+  .action-chip.primary:hover {
+    box-shadow: 0 6px 20px rgba(99,102,241,0.5);
+    color: white;
+  }
+  .action-chip:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .board-name {
+    position: absolute;
+    top: 14px;
+    left: 70px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    z-index: 10;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    padding: 7px 14px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(10px);
+  }
+  .board-name em {
+    font-style: normal;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+  }
+
+  /* stickies, shapes, etc */
+  .sticky {
+    position: absolute;
+    width: 160px;
+    min-height: 120px;
+    padding: 14px;
+    font-size: 13px;
+    line-height: 1.45;
+    cursor: move;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2);
+    color: #0a0a14;
+    border-radius: 8px;
+    user-select: none;
+    z-index: 3;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .sticky:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .sticky.selected, .shape.selected, .text-el.selected, .img-card.selected, .mm-node.selected {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+    z-index: 5;
+  }
+
+  .sticky-tags { display: flex; gap: 3px; margin-bottom: 6px; flex-wrap: wrap; }
+  .sticky-tag {
+    background: rgba(0,0,0,0.1);
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    text-transform: uppercase;
+  }
+  .sticky-tag.editable-title:hover {
+    background: rgba(0,0,0,0.2);
+    cursor: text;
+  }
+  .sticky-tag.editable-title.is-editing {
+    background: rgba(255,255,255,0.7);
+    box-shadow: 0 0 0 1.5px var(--accent);
+    color: #0a0a14;
+  }
+  .sticky-content {
+    font-weight: 500;
+    min-height: 40px;
+    outline: none;
+    cursor: inherit;
+  }
+  .sticky-content[contenteditable="true"] {
+    cursor: text !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    background: rgba(255,255,255,0.5);
+    border-radius: 4px;
+    padding: 2px;
+    margin: -2px;
+  }
+  .sticky-emoji { position: absolute; top: 8px; right: 10px; font-size: 18px; }
+
+  .sticky-link {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 11px;
+    color: #0e0e10;
+    text-decoration: underline;
+    opacity: 0.6;
+  }
+
+  .s-yellow { background: #fff3a0; } .s-pink { background: #ffb8c8; }
+  .s-blue { background: #a8d8ff; } .s-lilac { background: #d4b8ff; }
+  .s-lime { background: #c8f24c; } .s-peach { background: #ffd4a8; }
+  .s-mint { background: #a8e8c8; } .s-white { background: #fff; border: 1px solid #e0dbcd; }
+
+  .font-sans { font-family: 'Inter', sans-serif; }
+  .font-serif { font-family: 'Inter', sans-serif; font-weight: 700; letter-spacing: -0.02em; }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+  .font-hand { font-family: 'Caveat', cursive; font-size: 16px; }
+  .font-display { font-family: 'Inter', sans-serif; font-weight: 800; letter-spacing: -0.03em; }
+  .font-grotesk { font-family: 'Inter', sans-serif; font-weight: 500; }
+
+  .shape {
+    position: absolute;
+    cursor: move;
+    background: rgba(168,216,255,0.8);
+    border: 2px solid #7bafd8;
+    display: grid;
+    place-items: center;
+    padding: 8px 14px;
+    font-weight: 500;
+    color: #0e0e10;
+    font-size: 13px;
+    min-width: 100px;
+    min-height: 50px;
+    user-select: none;
+    z-index: 3;
+  }
+  .shape.sh-rect { border-radius: 8px; }
+  .shape.sh-rounded { border-radius: 20px; }
+  .shape.sh-circle { border-radius: 50%; aspect-ratio: 1; }
+  .shape.sh-oval { border-radius: 50%; }
+  .shape.sh-diamond { transform: rotate(45deg); min-width: 90px; min-height: 90px; }
+  .shape.sh-diamond > .shape-label { transform: rotate(-45deg); }
+  .shape.sh-triangle {
+    background: transparent !important;
+    border: none !important;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+  }
+  .shape.sh-triangle::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: inherit;
+    background-color: currentColor;
+    opacity: 0.8;
+  }
+  .shape.sh-hexagon {
+    clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%);
+    border-radius: 0 !important;
+  }
+  .shape.sh-star {
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+    border-radius: 0 !important;
+  }
+  .shape.sh-arrow {
+    clip-path: polygon(0% 30%, 70% 30%, 70% 10%, 100% 50%, 70% 90%, 70% 70%, 0% 70%);
+    border-radius: 0 !important;
+  }
+  .shape.sh-parallelogram {
+    clip-path: polygon(20% 0%, 100% 0%, 80% 100%, 0% 100%);
+    border-radius: 0 !important;
+  }
+
+  .shape-label {
+    cursor: inherit;
+    outline: none;
+    pointer-events: auto;
+  }
+  .shape-label[contenteditable="true"], .shape-label.is-editing {
+    cursor: text !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    background: rgba(255,255,255,0.6);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* ===== RESIZE HANDLES ===== */
+  .resize-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    z-index: 10;
+    display: none;
+  }
+  .selected > .resize-handle,
+  .frame.selected > .resize-handle,
+  .shape.selected > .resize-handle,
+  .img-card.selected > .resize-handle {
+    display: block;
+  }
+  .handle-nw { top: -6px; left: -6px; cursor: nwse-resize; }
+  .handle-n  { top: -6px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+  .handle-ne { top: -6px; right: -6px; cursor: nesw-resize; }
+  .handle-e  { top: 50%; right: -6px; transform: translateY(-50%); cursor: ew-resize; }
+  .handle-se { bottom: -6px; right: -6px; cursor: nwse-resize; }
+  .handle-s  { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+  .handle-sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
+  .handle-w  { top: 50%; left: -6px; transform: translateY(-50%); cursor: ew-resize; }
+
+  /* ===== EDITABLE TITLES (board name, frame label) ===== */
+  .editable-title {
+    cursor: text;
+    outline: none;
+    padding: 1px 4px;
+    margin: -1px -4px;
+    border-radius: 4px;
+    transition: background 0.12s;
+  }
+  .editable-title:hover {
+    background: var(--accent-soft);
+  }
+  .editable-title.is-editing {
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 2px var(--accent);
+    user-select: text !important;
+    -webkit-user-select: text !important;
+  }
+
+  .img-card {
+    position: absolute;
+    cursor: move;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    user-select: none;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    z-index: 3;
+  }
+  .img-card img { display: block; width: 100%; height: auto; pointer-events: none; }
+  .img-caption {
+    padding: 6px 10px;
+    font-size: 11px;
+    color: var(--ink-soft);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .frame {
+    position: absolute;
+    border: 2px dashed var(--line-strong);
+    border-radius: 12px;
+    padding: 38px 18px 18px;
+    pointer-events: none;
+    z-index: 1;
+    cursor: move;
+  }
+  .frame[data-frame="1"] { pointer-events: auto; }
+  .frame > * { pointer-events: auto; }
+  .frame.selected {
+    border-color: var(--accent);
+    border-style: solid;
+  }
+  .frame-label {
+    position: absolute;
+    top: -12px;
+    left: 14px;
+    background: var(--gradient);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    pointer-events: auto;
+    cursor: text;
+  }
+
+  .text-el {
+    position: absolute;
+    cursor: move;
+    padding: 4px 8px;
+    outline: none;
+    user-select: none;
+    min-width: 80px;
+    border-radius: 4px;
+    z-index: 3;
+  }
+  .text-el[contenteditable="true"] {
+    cursor: text !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    background: var(--accent-soft);
+  }
+
+  /* ctx menu */
+  .ctx-menu {
+    position: absolute;
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 10px;
+    padding: 5px;
+    display: none;
+    gap: 2px;
+    z-index: 50;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+    border: 1px solid rgba(245,241,232,0.1);
+    flex-wrap: wrap;
+  }
+  .ctx-menu.open { display: flex; align-items: center; }
+
+  .ctx-btn {
+    background: transparent;
+    border: none;
+    color: var(--paper);
+    width: 30px; height: 30px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    opacity: 0.7;
+  }
+  .ctx-btn:hover { background: rgba(245,241,232,0.12); opacity: 1; }
+
+  .ctx-divider { width: 1px; height: 20px; background: rgba(245,241,232,0.15); margin: 0 3px; }
+
+  .ctx-color-row { display: flex; gap: 3px; padding: 0 4px; }
+
+  /* Text colour popover (anchored to ctx menu) */
+  .text-color-popover {
+    position: absolute;
+    top: 44px;
+    right: 4px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    padding: 10px;
+    display: none;
+    z-index: 60;
+    box-shadow: 0 14px 36px rgba(0,0,0,0.4);
+    backdrop-filter: blur(20px);
+  }
+  .text-color-popover.open { display: block; }
+  .text-color-popover-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    margin-bottom: 7px;
+  }
+  .text-color-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 22px);
+    gap: 5px;
+  }
+  .text-color-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--surface-2);
+    box-shadow: 0 0 0 1px var(--line-strong);
+    padding: 0;
+    transition: transform 0.12s;
+  }
+  .text-color-swatch:hover {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .custom-swatch-mini {
+    background: linear-gradient(45deg, #ff5b1f 0%, #a855f7 33%, #6366f1 66%, #06b6d4 100%) !important;
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+  }
+  .reset-swatch {
+    background: var(--surface-2) !important;
+    color: var(--ink-soft);
+    font-size: 13px;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+  }
+  .ctx-color {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+  }
+  .ctx-color.active { border-color: var(--paper); }
+
+  .ctx-font-select {
+    background: rgba(245,241,232,0.08);
+    border: 1px solid rgba(245,241,232,0.1);
+    color: var(--paper);
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  /* ===== DOCS ===== */
+  .docs-layout { flex: 1; display: grid; grid-template-columns: 220px 1fr 200px; overflow: hidden; }
+  .docs-tree { border-right: 1px solid var(--line); padding: 22px 14px; overflow-y: auto; background: var(--surface); }
+  .doc-item { padding: 7px 10px; font-size: 13px; border-radius: 7px; cursor: pointer; color: var(--ink); transition: all 0.15s; }
+  .doc-item:hover { background: var(--surface-2); }
+  .doc-item.active {
+    background: var(--accent-soft);
+    color: var(--accent-hover);
+    font-weight: 600;
+  }
+  .docs-content { overflow-y: auto; padding: 48px 60px; }
+  .doc-title {
+    font-family: 'Inter', sans-serif;
+    font-weight: 800;
+    font-size: 56px;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    margin-bottom: 24px;
+  }
+  .doc-title em {
+    font-style: normal;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .doc-content h2 {
+    font-family: 'Inter', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 28px 0 10px;
+    letter-spacing: -0.02em;
+  }
+  .doc-content p { margin-bottom: 12px; font-size: 15px; line-height: 1.65; color: var(--ink-soft); }
+  .doc-content ul { margin: 0 0 16px 20px; font-size: 15px; line-height: 1.7; color: var(--ink-soft); }
+
+  .callout {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    padding: 14px 18px;
+    border-radius: 0 10px 10px 0;
+    margin: 20px 0;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .callout strong {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: block;
+    margin-bottom: 5px;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* ◆ AI summary block */
+  .ai-summary-block {
+    background: linear-gradient(135deg, rgba(168,85,247,0.08), rgba(99,102,241,0.08), rgba(6,182,212,0.08));
+    border: 1px solid var(--line-strong);
+    padding: 18px 20px;
+    border-radius: 14px;
+    margin: 22px 0;
+    min-height: 80px;
+    position: relative;
+    box-shadow: var(--glow);
+  }
+  .ai-summary-block ul { color: var(--ink); margin: 8px 0 0 18px; line-height: 1.7; }
+  .ai-summary-block.empty {
+    background: var(--surface);
+    border: 1px dashed var(--line-strong);
+    box-shadow: none;
+    color: var(--ink-soft);
+  }
+
+  .ai-summary-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: space-between;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .ai-summary-block.empty .ai-summary-label {
+    background: none;
+    -webkit-text-fill-color: var(--ink-soft);
+    color: var(--ink-soft);
+  }
+
+  .gen-btn {
+    background: var(--gradient);
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 10px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    -webkit-text-fill-color: white;
+  }
+  .gen-btn:hover { filter: brightness(1.1); }
+  .gen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .docs-outline { border-left: 1px solid var(--line); padding: 48px 18px; }
+  .outline-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+  .outline-item {
+    display: block;
+    padding: 6px 0 6px 12px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .outline-item:hover { color: var(--ink); }
+  .outline-item.active {
+    border-left-color: var(--accent);
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* ===== KANBAN ===== */
+  .kanban-board { flex: 1; display: flex; gap: 14px; padding: 20px; overflow-x: auto; align-items: flex-start; }
+  .kanban-col {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 12px;
+    min-width: 270px;
+    max-width: 270px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .kanban-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 6px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .kanban-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+  .kanban-count {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-soft);
+  }
+  .kanban-card {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .kanban-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: 0 8px 20px rgba(99,102,241,0.2);
+  }
+
+  .card-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'Inter', sans-serif;
+    font-size: 9.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    color: white;
+  }
+  .tag-design { background: #a855f7; }
+  .tag-eng { background: #06b6d4; }
+  .tag-content { background: #10b981; }
+  .tag-urgent { background: #f43f5e; }
+  .tag-research { background: #ec4899; }
+  .tag-ai {
+    background: var(--gradient);
+    color: white;
+  }
+
+  .card-title { font-size: 13.5px; font-weight: 500; line-height: 1.4; margin-bottom: 10px; color: var(--ink); }
+  .card-footer { display: flex; justify-content: space-between; align-items: center; }
+  .card-meta { display: flex; gap: 8px; font-size: 11px; color: var(--ink-soft); }
+  .mini-avatar { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 9px; font-weight: 700; font-family: 'Inter', sans-serif; color: white; border: 2px solid var(--surface-2); }
+
+  /* ===== CALENDAR ===== */
+  .cal-container { flex: 1; padding: 24px; overflow: auto; }
+  .cal-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+  .cal-month {
+    font-family: 'Inter', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+  .cal-month em {
+    font-style: normal;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--line-strong); border: 1px solid var(--line-strong); border-radius: 14px; overflow: hidden; min-width: 600px; }
+  .cal-day-label {
+    background: var(--surface);
+    padding: 9px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    letter-spacing: 0.05em;
+  }
+  .cal-day { background: var(--surface-2); padding: 8px; min-height: 90px; cursor: pointer; transition: background 0.15s; }
+  .cal-day:hover { background: var(--surface); }
+  .cal-day.other-month { background: var(--paper-warm); opacity: 0.4; }
+  .cal-day.today {
+    background: var(--accent-soft);
+    border-top: 2px solid var(--accent);
+  }
+  .cal-date { font-size: 12px; font-weight: 600; font-family: 'Inter', sans-serif; margin-bottom: 4px; }
+  .cal-today-pill {
+    background: var(--gradient);
+    color: white;
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 600;
+  }
+  .cal-event {
+    font-size: 10.5px;
+    padding: 3px 7px;
+    border-radius: 4px;
+    margin-bottom: 3px;
+    color: white;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ev-design { background: #a855f7; }
+  .ev-eng { background: #06b6d4; }
+  .ev-content { background: #10b981; }
+  .ev-urgent { background: #f43f5e; }
+
+  /* ===== TIMELINE ===== */
+  .timeline-container { flex: 1; padding: 24px; overflow: auto; }
+  .timeline-header { display: grid; grid-template-columns: 160px repeat(12, minmax(60px, 1fr)); border-bottom: 1px solid var(--line); margin-bottom: 10px; min-width: 900px; }
+  .tl-week {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    text-align: center;
+    padding: 8px 4px;
+    border-left: 1px solid var(--line);
+    letter-spacing: 0.05em;
+  }
+  .tl-week.now {
+    color: white;
+    font-weight: 700;
+    background: var(--gradient);
+    border-radius: 4px 4px 0 0;
+  }
+  .tl-swim { display: grid; grid-template-columns: 160px 1fr; padding: 8px 0; border-bottom: 1px solid var(--line); min-width: 900px; }
+  .tl-swim-label { font-size: 13px; font-weight: 600; padding: 14px 12px; display: flex; align-items: center; gap: 10px; }
+  .tl-track { position: relative; height: 44px; background: var(--surface); border: 1px solid var(--line); border-radius: 9px; }
+  .tl-bar {
+    position: absolute;
+    top: 5px; bottom: 5px;
+    border-radius: 6px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: transform 0.15s;
+  }
+  .tl-bar:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+
+  /* ===== MIND MAP ===== */
+  .mindmap-view {
+    flex: 1;
+    position: relative;
+    overflow: auto;
+    background: radial-gradient(circle, var(--grid) 1px, transparent 1px);
+    background-size: 24px 24px;
+    touch-action: pan-x pan-y;
+  }
+  .mm-surface { position: relative; width: 2200px; height: 1200px; min-width: 100%; min-height: 100%; }
+  .mm-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+
+  .mm-node {
+    position: absolute;
+    padding: 10px 16px;
+    border-radius: 10px;
+    cursor: move;
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    user-select: none;
+    z-index: 2;
+    max-width: 220px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--line-strong);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transition: all 0.15s;
+  }
+  .mm-node:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+  .mm-node.mm-root {
+    background: var(--gradient);
+    color: white;
+    border: none;
+    padding: 20px 28px;
+    font-family: 'Inter', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(99,102,241,0.4), var(--glow);
+  }
+  .mm-node.mm-root em {
+    font-style: normal;
+    color: white;
+    opacity: 0.95;
+  }
+  .mm-branch-1 { background: #ec4899; border-color: #ec4899; }
+  .mm-branch-2 { background: #06b6d4; border-color: #06b6d4; }
+  .mm-branch-3 { background: #10b981; border-color: #10b981; }
+  .mm-branch-4 { background: #a855f7; border-color: #a855f7; }
+  .mm-branch-5 { background: #f59e0b; border-color: #f59e0b; }
+  .mm-branch-6 { background: #14b8a6; border-color: #14b8a6; }
+
+  .mm-leaf {
+    font-size: 12px;
+    padding: 7px 13px;
+    border-radius: 18px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    color: var(--ink);
+    max-width: 180px;
+    font-weight: 500;
+  }
+
+  .mm-toolbar-left {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    display: flex;
+    gap: 4px;
+    z-index: 10;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    padding: 5px;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+  }
+  .mm-tool-btn {
+    background: transparent;
+    border: none;
+    color: var(--ink-soft);
+    width: 32px; height: 32px;
+    border-radius: 7px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: all 0.15s;
+  }
+  .mm-tool-btn:hover { background: var(--surface-2); color: var(--ink); }
+  .mm-tool-btn.active { background: var(--gradient); color: white; }
+
+  .mm-toolbar { position: absolute; top: 14px; right: 14px; display: flex; gap: 8px; z-index: 10; }
+
+  /* ===== DATABASE ===== */
+  .db-container { flex: 1; padding: 24px; overflow: auto; }
+  .db-toolbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .db-chip {
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--ink);
+    transition: all 0.15s;
+  }
+  .db-chip:hover { border-color: var(--accent); color: var(--accent-hover); }
+  .db-chip.active {
+    background: var(--gradient);
+    color: white;
+    border-color: transparent;
+  }
+  .db-table {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--surface);
+    border-collapse: collapse;
+    min-width: 600px;
+  }
+  .db-table th {
+    background: var(--surface-2);
+    text-align: left;
+    padding: 10px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--line);
+  }
+  .db-table td { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--line); color: var(--ink); }
+  .db-table tr:last-child td { border-bottom: none; }
+  .db-status {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: white;
+  }
+  .st-backlog { background: var(--ink-soft); }
+  .st-progress { background: var(--gradient); }
+  .st-review { background: #a855f7; }
+  .st-shipped { background: #10b981; }
+
+  /* ===== MODAL ===== */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    padding: 20px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 18px;
+    max-width: 540px;
+    width: 100%;
+    max-height: 85vh;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6), var(--glow);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .modal.wide { max-width: 860px; }
+  .modal-header {
+    padding: 22px 24px 16px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+  }
+  .modal-header h2 {
+    font-family: 'Inter', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    margin-bottom: 4px;
+  }
+  .modal-header h2 em {
+    font-style: normal;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .modal-header p { font-size: 13px; color: var(--ink-soft); }
+  .modal-close {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    color: var(--ink);
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .modal-close:hover { border-color: var(--accent); color: var(--accent-hover); }
+  .modal-body { padding: 22px 24px; overflow-y: auto; }
+
+  /* SETTINGS */
+  .setting-row { margin-bottom: 18px; }
+  .setting-label {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 7px;
+    letter-spacing: 0.05em;
+  }
+  .setting-input {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid var(--line-strong);
+    border-radius: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--surface-2);
+    color: var(--ink);
+    transition: border-color 0.15s;
+  }
+  .setting-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .setting-help { font-size: 12px; color: var(--ink-soft); margin-top: 7px; line-height: 1.5; }
+  .setting-help a { color: var(--accent-hover); text-decoration: none; }
+  .setting-help a:hover { text-decoration: underline; }
+
+  .ai-banner {
+    background: linear-gradient(135deg, rgba(168,85,247,0.1), rgba(99,102,241,0.1), rgba(6,182,212,0.1));
+    border: 1px solid var(--line-strong);
+    padding: 14px 16px;
+    border-radius: 10px;
+    margin-bottom: 18px;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .ai-banner strong {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    letter-spacing: 0.06em;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .conn-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    font-size: 12.5px;
+    margin-top: 12px;
+  }
+  .conn-status .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .conn-status.ok .dot { background: #10b981; box-shadow: 0 0 8px #10b981; }
+  .conn-status.err .dot { background: #f43f5e; box-shadow: 0 0 8px #f43f5e; }
+
+  /* IMG modal */
+  .img-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .img-option {
+    border: 2px dashed var(--line-strong);
+    border-radius: 12px;
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .img-option:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .img-option svg { margin-bottom: 8px; color: var(--accent-hover); }
+  .img-option h4 { font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .img-option p { font-size: 12px; color: var(--ink-soft); }
+  .url-input-wrap { margin-top: 16px; }
+  .url-input-wrap label {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+    letter-spacing: 0.05em;
+  }
+  .url-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 9px;
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--surface-2);
+    color: var(--ink);
+  }
+  .url-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .stock-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 16px; }
+  .stock-img { aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer; border: 1px solid var(--line); transition: all 0.15s; }
+  .stock-img:hover { transform: scale(1.04); border-color: var(--accent); }
+  .stock-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* AI loading */
+  .ai-loading {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface);
+    color: var(--ink);
+    padding: 14px 22px;
+    border-radius: 12px;
+    border: 1px solid var(--line-strong);
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    transition: all 0.25s;
+    z-index: 150;
+    pointer-events: none;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4), var(--glow);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .ai-loading.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .ai-spinner {
+    width: 16px; height: 16px;
+    border: 2px solid var(--line-strong);
+    border-top-color: var(--accent);
+    border-right-color: var(--gradient-1);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface);
+    color: var(--ink);
+    padding: 12px 20px;
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    transition: all 0.25s;
+    z-index: 100;
+    pointer-events: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+  /* mobile */
+  .sidebar-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 70; display: none; }
+  .sidebar-backdrop.open { display: block; }
+
+  @media (max-width: 768px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: 48px 1fr; }
+    .sidebar { position: fixed; top: 48px; left: 0; bottom: 0; width: 240px; z-index: 80; transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-toggle { display: grid; }
+    .breadcrumb { font-size: 10px; }
+    .logo { font-size: 17px; }
+    .logo-mark { width: 22px; height: 22px; font-size: 13px; }
+    .topbar { padding: 0 10px; gap: 8px; }
+    .topbar .btn { padding: 5px 10px; font-size: 11px; }
+    .view-switcher { padding: 6px 10px; }
+    .view-tab { padding: 5px 10px; font-size: 11.5px; }
+    .toolbar { left: 8px; }
+    .tool { width: 34px; height: 34px; }
+    .tool-tip { display: none; }
+    .top-bar-canvas { top: 8px; right: 8px; gap: 6px; }
+    .action-chip { padding: 6px 9px; font-size: 11px; }
+    .action-chip span { display: none; }
+    .board-name { top: 8px; left: 55px; font-size: 14px; padding: 4px 9px; max-width: 130px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .flyout { left: 50px; }
+    .ctx-menu.open { position: fixed !important; bottom: 0; left: 0; right: 0; top: auto !important; border-radius: 18px 18px 0 0; padding: 14px 10px 18px; justify-content: center; max-width: 100%; overflow-x: auto; }
+    .docs-layout { grid-template-columns: 1fr; }
+    .docs-tree, .docs-outline { display: none; }
+    .docs-content { padding: 28px 20px; }
+    .doc-title { font-size: 32px; }
+    .kanban-col { min-width: 240px; max-width: 240px; }
+    .cal-day { min-height: 70px; padding: 4px; }
+    .cal-event { font-size: 9px; }
+    .cal-month { font-size: 20px; }
+    .mm-toolbar-left, .mm-toolbar { top: 8px; padding: 3px; }
+    .modal-header h2 { font-size: 20px; }
+    .img-options { grid-template-columns: 1fr; }
+    .stock-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="sidebar-backdrop" id="sb-backdrop" onclick="toggleSidebar()"></div>
+
+<div class="app">
+  <header class="topbar">
+    <button class="sidebar-toggle" onclick="toggleSidebar()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M2 8h12M2 12h12"/></svg>
+    </button>
+    <div class="logo">
+      <div class="logo-mark">M</div>
+      <span>Maestro <span class="logo-suffix">Kanvas</span></span>
+    </div>
+    <div class="ai-badge"><span>iGaming · AI</span></div>
+    <div class="breadcrumb">
+      <span class="hide-mobile">STech / Compliance / </span><span class="current">Q2 Campaign</span>
+    </div>
+    <button class="icon-btn" onclick="openSettings()" title="Settings — connect AI">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2"/><path d="M13 8a5 5 0 00-.3-1.7l1.1-.8-1-1.7-1.3.5a5 5 0 00-1.5-.9L10 2H8L7.7 3.4a5 5 0 00-1.5.9l-1.3-.5-1 1.7 1.1.8A5 5 0 003 8c0 .6.1 1.2.3 1.7l-1.1.8 1 1.7 1.3-.5a5 5 0 001.5.9L6 14h2l.3-1.4a5 5 0 001.5-.9l1.3.5 1-1.7-1.1-.8c.2-.5.3-1.1.3-1.7z"/></svg>
+      <span class="ai-status-dot" id="ai-status-dot"></span>
+    </button>
+    <button class="icon-btn" onclick="toggleTheme()">
+      <svg id="theme-sun" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="display:none;"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5L13 13M3 13l1.5-1.5M11.5 4.5L13 3"/></svg>
+      <svg id="theme-moon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 9.5A5.5 5.5 0 116.5 3a4.5 4.5 0 006.5 6.5z"/></svg>
+    </button>
+  </header>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Workspace</div>
+      <div class="nav-item active">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1l7 4v6l-7 4-7-4V5z"/></svg>
+        Compliance Team
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Pages</div>
+      <div class="nav-item" onclick="switchView('docs'); closeSidebar();">📄 Campaign Brief</div>
+      <div class="nav-item" onclick="switchView('kanban'); closeSidebar();">📋 Launch Board</div>
+      <div class="nav-item" onclick="switchView('canvas'); closeSidebar();">🎨 Q2 Discovery</div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Getting started</div>
+      <div class="nav-item" onclick="openSettings(); closeSidebar();" style="color: var(--accent); font-weight: 500;">◆ Connect AI</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="view-switcher">
+      <div class="view-tabs">
+        <button class="view-tab active" data-view="canvas" onclick="switchView('canvas')">Canvas</button>
+        <button class="view-tab" data-view="docs" onclick="switchView('docs')">Docs</button>
+        <button class="view-tab" data-view="kanban" onclick="switchView('kanban')">Board</button>
+        <button class="view-tab" data-view="calendar" onclick="switchView('calendar')">Calendar</button>
+        <button class="view-tab" data-view="timeline" onclick="switchView('timeline')">Timeline</button>
+        <button class="view-tab" data-view="mindmap" onclick="switchView('mindmap')">Mind map</button>
+        <button class="view-tab" data-view="database" onclick="switchView('database')">Database</button>
+      </div>
+    </div>
+
+    <!-- CANVAS -->
+    <div class="view-panel active canvas-view" id="canvas-panel">
+      <div class="board-name">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/></svg>
+        <span class="editable-title" ondblclick="makeEditable(this)">Q2 Discovery</span>
+      </div>
+      <div class="top-bar-canvas">
+        <button class="action-chip" onclick="openImageModal()" title="Image">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1"/><circle cx="6" cy="6" r="1.5"/><path d="M3 12l3-3 2 2 3-3 2 2"/></svg>
+          <span>Image</span>
+        </button>
+        <button class="action-chip primary" onclick="aiClusterStickies()" id="ai-cluster-btn" title="AI: cluster stickies by theme">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1L10 6L15 8L10 10L8 15L6 10L1 8L6 6z"/></svg>
+          <span>AI cluster</span>
+        </button>
+        <button class="action-chip primary" onclick="aiConvertToCards()" id="ai-convert-btn" title="AI: convert stickies to kanban cards">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h5v10H2zM9 3h5v7H9z"/></svg>
+          <span>AI → cards</span>
+        </button>
+      </div>
+
+      <div class="toolbar">
+        <button class="tool active" data-tool="select"><svg width="17" height="17" viewBox="0 0 18 18" fill="currentColor"><path d="M3 2l12 6-5 1 3 6-2 1-3-6-3 4z"/></svg><span class="tool-tip">Select</span></button>
+        <button class="tool" onclick="addSticky()"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="12" height="12" rx="1"/></svg><span class="tool-tip">Sticky · N</span></button>
+        <button class="tool" onclick="addText()"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h10M9 4v10M7 14h4"/></svg><span class="tool-tip">Text · T</span></button>
+        <button class="tool" onclick="toggleFlyout('shapes')"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="12" height="12"/></svg><span class="tool-tip">Shapes · S</span></button>
+        <button class="tool" onclick="toggleFrameMenu()"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="14" height="11" rx="1.5"/><path d="M2 7h14"/></svg><span class="tool-tip">Frame · F</span></button>
+        <div class="tool-divider"></div>
+        <button class="tool" onclick="togglePen()"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 15l2-5 8-8 3 3-8 8z"/></svg><span class="tool-tip">Pen · P</span></button>
+        <button class="tool" onclick="openImageModal()"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="13" height="13" rx="1"/><circle cx="6.5" cy="6.5" r="1.5"/><path d="M3 13l4-4 2 2 3-3 3 3"/></svg><span class="tool-tip">Image · I</span></button>
+        <button class="tool" onclick="toggleFlyout('emoji')"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="6"/><circle cx="6.5" cy="7" r="0.8" fill="currentColor"/><circle cx="11.5" cy="7" r="0.8" fill="currentColor"/><path d="M6 11c1 1.5 4 1.5 5 0"/></svg><span class="tool-tip">Emoji · E</span></button>
+      </div>
+
+      <div class="flyout" id="flyout-shapes" style="top: 38%;">
+        <div class="flyout-title">Shapes</div>
+        <div class="shape-grid">
+          <button class="shape-btn" onclick="addShape('sh-rect')" title="Rectangle"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="14" height="10" rx="1"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-rounded')" title="Rounded"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="14" height="10" rx="5"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-circle')" title="Circle"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="6"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-oval')" title="Oval"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="9" cy="9" rx="7" ry="4.5"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-diamond')" title="Diamond"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 2l7 7-7 7-7-7z"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-triangle')" title="Triangle"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 2l7 13H2z"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-hexagon')" title="Hexagon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 2h8l4 7-4 7H5L1 9z"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-star')" title="Star"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 2l2 5 5 .5-4 3.5 1.5 5L9 13l-4.5 3 1.5-5L2 7.5 7 7z"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-arrow')" title="Arrow"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 9h11M11 5l4 4-4 4"/></svg></button>
+          <button class="shape-btn" onclick="addShape('sh-parallelogram')" title="Parallelogram"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 4h11l-3 10H2z"/></svg></button>
+        </div>
+        <div class="flyout-title" style="margin-top:10px;">Fill colour</div>
+        <div class="color-row">
+          <div class="color-swatch" style="background:#a8d8ff;" onclick="setShapeColor('#a8d8ff', this)"></div>
+          <div class="color-swatch" style="background:#ffb8c8;" onclick="setShapeColor('#ffb8c8', this)"></div>
+          <div class="color-swatch" style="background:#c8f24c;" onclick="setShapeColor('#c8f24c', this)"></div>
+          <div class="color-swatch" style="background:#d4b8ff;" onclick="setShapeColor('#d4b8ff', this)"></div>
+          <div class="color-swatch" style="background:#ffd4a8;" onclick="setShapeColor('#ffd4a8', this)"></div>
+          <button class="color-swatch custom-swatch" title="Custom colour" onclick="openCustomColorPicker(currentShapeColor, applyCustomShapeColor)">+</button>
+        </div>
+      </div>
+
+      <!-- FRAME MENU -->
+      <div class="flyout" id="frame-menu" style="top: 44%;">
+        <div class="flyout-title">Add frame</div>
+        <div class="frame-preset-grid">
+          <button class="frame-preset" onclick="addFrame('custom'); toggleFrameMenu();">
+            <div class="fp-icon" style="aspect-ratio: 16/10;"></div>
+            <div class="fp-label">Custom</div>
+          </button>
+          <button class="frame-preset" onclick="addFrame('fhd'); toggleFrameMenu();">
+            <div class="fp-icon" style="aspect-ratio: 16/9;"></div>
+            <div class="fp-label">1080p</div>
+          </button>
+          <button class="frame-preset" onclick="addFrame('a4l'); toggleFrameMenu();">
+            <div class="fp-icon" style="aspect-ratio: 1.41/1;"></div>
+            <div class="fp-label">A4 land.</div>
+          </button>
+          <button class="frame-preset" onclick="addFrame('a4p'); toggleFrameMenu();">
+            <div class="fp-icon" style="aspect-ratio: 1/1.41;"></div>
+            <div class="fp-label">A4 port.</div>
+          </button>
+          <button class="frame-preset" onclick="addFrame('sq'); toggleFrameMenu();">
+            <div class="fp-icon" style="aspect-ratio: 1;"></div>
+            <div class="fp-label">Square</div>
+          </button>
+          <button class="frame-preset" onclick="addFrame('classic'); toggleFrameMenu();">
+            <div class="fp-icon" style="aspect-ratio: 4/3;"></div>
+            <div class="fp-label">4:3</div>
+          </button>
+        </div>
+      </div>
+
+      <div class="flyout" id="flyout-pen" style="top: 55%;">
+        <div class="flyout-title">Pen colour</div>
+        <div class="color-row">
+          <div class="color-swatch active" style="background:#0e0e10;" onclick="setPenColor('#0e0e10', this)"></div>
+          <div class="color-swatch" style="background:#ff5b1f;" onclick="setPenColor('#ff5b1f', this)"></div>
+          <div class="color-swatch" style="background:#d44a4a;" onclick="setPenColor('#d44a4a', this)"></div>
+          <div class="color-swatch" style="background:#5bc4a8;" onclick="setPenColor('#5bc4a8', this)"></div>
+          <div class="color-swatch" style="background:#7b8cd4;" onclick="setPenColor('#7b8cd4', this)"></div>
+          <button class="color-swatch custom-swatch" title="Custom colour" onclick="openCustomColorPicker(penColor, applyCustomPenColor)">+</button>
+        </div>
+        <div class="flyout-title">Thickness</div>
+        <div class="stroke-row">
+          <button class="stroke-btn" onclick="setPenWidth(1.5, this)"><svg width="20" height="6" viewBox="0 0 20 6"><line x1="2" y1="3" x2="18" y2="3" stroke="currentColor" stroke-width="1"/></svg></button>
+          <button class="stroke-btn active" onclick="setPenWidth(2.5, this)"><svg width="20" height="6" viewBox="0 0 20 6"><line x1="2" y1="3" x2="18" y2="3" stroke="currentColor" stroke-width="2.5"/></svg></button>
+          <button class="stroke-btn" onclick="setPenWidth(4, this)"><svg width="20" height="6" viewBox="0 0 20 6"><line x1="2" y1="3" x2="18" y2="3" stroke="currentColor" stroke-width="4"/></svg></button>
+          <button class="stroke-btn" onclick="setPenWidth(6, this)"><svg width="20" height="6" viewBox="0 0 20 6"><line x1="2" y1="3" x2="18" y2="3" stroke="currentColor" stroke-width="6"/></svg></button>
+        </div>
+      </div>
+
+      <div class="flyout" id="flyout-emoji" style="top: 65%;">
+        <div class="flyout-title">Emoji</div>
+        <div style="display:grid;grid-template-columns:repeat(8,26px);gap:3px;max-width:230px;">
+          <button class="shape-btn" style="width:26px;height:26px;font-size:14px;" onclick="addEmojiToSelected('💡')">💡</button>
+          <button class="shape-btn" style="width:26px;height:26px;font-size:14px;" onclick="addEmojiToSelected('⚡')">⚡</button>
+          <button class="shape-btn" style="width:26px;height:26px;font-size:14px;" onclick="addEmojiToSelected('🎯')">🎯</button>
+          <button class="shape-btn" style="width:26px;height:26px;font-size:14px;" onclick="addEmojiToSelected('🔥')">🔥</button>
+          <button class="shape-btn" style="width:26px;height:26px;font-size:14px;" onclick="addEmojiToSelected('⭐')">⭐</button>
+          <button class="shape-btn" style="width:26px;height:26px;font-size:14px;" onclick="addEmojiToSelected('✅')">✅</button>
+          <button class="shape-btn" style="width:26px;height:26px;font-size:14px;" onclick="addEmojiToSelected('❓')">❓</button>
+          <button class="shape-btn" style="width:26px;height:26px;font-size:14px;" onclick="addEmojiToSelected('⚠️')">⚠️</button>
+          <button class="shape-btn" style="width:26px;height:26px;font-size:14px;" onclick="addEmojiToSelected('🚀')">🚀</button>
+          <button class="shape-btn" style="width:26px;height:26px;font-size:14px;" onclick="addEmojiToSelected('💰')">💰</button>
+          <button class="shape-btn" style="width:26px;height:26px;font-size:14px;" onclick="addEmojiToSelected('🔒')">🔒</button>
+          <button class="shape-btn" style="width:26px;height:26px;font-size:14px;" onclick="addEmojiToSelected('📌')">📌</button>
+        </div>
+      </div>
+
+      <!-- CTX MENU -->
+      <!-- CONNECTOR CTX MENU -->
+      <div class="connector-ctx" id="connector-ctx">
+        <button class="connector-ctx-btn" data-style="curved" onclick="setConnectorStyle('curved')" title="Curved">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12 C 6 4, 10 4, 14 12"/></svg>
+        </button>
+        <button class="connector-ctx-btn" data-style="straight" onclick="setConnectorStyle('straight')" title="Straight">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12 L 14 4"/></svg>
+        </button>
+        <button class="connector-ctx-btn" data-style="elbow" onclick="setConnectorStyle('elbow')" title="Elbow">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12 L 8 12 L 8 4 L 14 4"/></svg>
+        </button>
+        <div class="connector-divider"></div>
+        <button class="connector-ctx-btn" onclick="toggleConnectorArrow('start')" title="Toggle start arrow">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 8 L 2 8 M 5 5 L 2 8 L 5 11"/></svg>
+        </button>
+        <button class="connector-ctx-btn" onclick="toggleConnectorArrow('end')" title="Toggle end arrow">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8 L 14 8 M 11 5 L 14 8 L 11 11"/></svg>
+        </button>
+        <div class="connector-divider"></div>
+        <button class="connector-ctx-btn" onclick="addConnectorLabel()" title="Add label">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h10M5 8h6M3 11h10"/></svg>
+        </button>
+        <button class="connector-ctx-btn danger" onclick="deleteSelectedConnector()" title="Delete">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M6 4V2h4v2M5 4l1 10h4l1-10"/></svg>
+        </button>
+      </div>
+
+      <div class="ctx-menu" id="ctx-menu">
+        <div class="ctx-color-row">
+          <div class="ctx-color" style="background:#fff3a0;" onclick="setSelectedColor('s-yellow','#fff3a0',event)"></div>
+          <div class="ctx-color" style="background:#ffb8c8;" onclick="setSelectedColor('s-pink','#ffb8c8',event)"></div>
+          <div class="ctx-color" style="background:#a8d8ff;" onclick="setSelectedColor('s-blue','#a8d8ff',event)"></div>
+          <div class="ctx-color" style="background:#d4b8ff;" onclick="setSelectedColor('s-lilac','#d4b8ff',event)"></div>
+          <div class="ctx-color" style="background:#c8f24c;" onclick="setSelectedColor('s-lime','#c8f24c',event)"></div>
+          <div class="ctx-color" style="background:#ffd4a8;" onclick="setSelectedColor('s-peach','#ffd4a8',event)"></div>
+          <div class="ctx-color" style="background:#a8e8c8;" onclick="setSelectedColor('s-mint','#a8e8c8',event)"></div>
+          <button class="ctx-color custom-swatch" title="Custom colour" onclick="openCustomColorPicker('#a8d8ff', applyCustomStickyColor)">+</button>
+        </div>
+        <div class="ctx-divider"></div>
+        <select class="ctx-font-select" onchange="setSelectedFont(this.value)">
+          <option value="font-sans">Sans</option><option value="font-serif">Serif</option>
+          <option value="font-mono">Mono</option><option value="font-hand">Hand</option>
+          <option value="font-display">Display</option><option value="font-grotesk">Grotesk</option>
+        </select>
+        <div class="ctx-divider"></div>
+        <button class="ctx-btn" onclick="adjustFontSize(-1)"><span style="font-size:11px;font-weight:600;">A−</span></button>
+        <button class="ctx-btn" onclick="adjustFontSize(1)"><span style="font-size:13px;font-weight:600;">A+</span></button>
+        <button class="ctx-btn" onclick="toggleSelectedBold()"><strong style="font-size:13px;">B</strong></button>
+        <button class="ctx-btn" onclick="toggleSelectedItalic()"><em style="font-size:13px;font-family:serif;">I</em></button>
+        <button class="ctx-btn" onclick="toggleTextColorPicker(event)" title="Text colour">
+          <span style="font-size:13px;font-weight:700;display:inline-block;border-bottom:3px solid var(--accent);line-height:1;padding:0 1px;">A</span>
+        </button>
+        <div class="text-color-popover" id="text-color-popover">
+          <div class="text-color-popover-label">Text colour</div>
+          <div class="text-color-grid">
+            <button class="text-color-swatch" style="background:#0a0a14;" onclick="setSelectedTextColor('#0a0a14')" title="Black"></button>
+            <button class="text-color-swatch" style="background:#ffffff;" onclick="setSelectedTextColor('#ffffff')" title="White"></button>
+            <button class="text-color-swatch" style="background:#6b7280;" onclick="setSelectedTextColor('#6b7280')" title="Grey"></button>
+            <button class="text-color-swatch" style="background:#6366f1;" onclick="setSelectedTextColor('#6366f1')" title="Indigo"></button>
+            <button class="text-color-swatch" style="background:#a855f7;" onclick="setSelectedTextColor('#a855f7')" title="Purple"></button>
+            <button class="text-color-swatch" style="background:#06b6d4;" onclick="setSelectedTextColor('#06b6d4')" title="Cyan"></button>
+            <button class="text-color-swatch" style="background:#10b981;" onclick="setSelectedTextColor('#10b981')" title="Green"></button>
+            <button class="text-color-swatch" style="background:#f59e0b;" onclick="setSelectedTextColor('#f59e0b')" title="Amber"></button>
+            <button class="text-color-swatch" style="background:#f43f5e;" onclick="setSelectedTextColor('#f43f5e')" title="Red"></button>
+            <button class="text-color-swatch" style="background:#ec4899;" onclick="setSelectedTextColor('#ec4899')" title="Pink"></button>
+            <button class="text-color-swatch custom-swatch-mini" onclick="openCustomColorPicker('#0a0a14', setSelectedTextColor)" title="Custom">+</button>
+            <button class="text-color-swatch reset-swatch" onclick="setSelectedTextColor('')" title="Reset">↻</button>
+          </div>
+        </div>
+        <div class="ctx-divider"></div>
+        <button class="ctx-btn" onclick="promptLink()"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 9a3 3 0 004 0l2-2a3 3 0 00-4-4L8 4"/><path d="M9 7a3 3 0 00-4 0L3 9a3 3 0 004 4l1-1"/></svg></button>
+        <button class="ctx-btn" onclick="duplicateSelected()"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="10" height="10" rx="1"/><path d="M10 4V2H2v8h2"/></svg></button>
+        <button class="ctx-btn" style="color:#ff6b6b;" onclick="deleteSelected()"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M6 4V2h4v2M5 4l1 10h4l1-10"/></svg></button>
+      </div>
+
+      <div class="canvas-surface" id="canvas-surface">
+        <svg class="connector-layer" id="connector-layer" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+            </marker>
+            <marker id="arrowhead-start" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 10 0 L 0 5 L 10 10 z" fill="var(--accent)"/>
+            </marker>
+          </defs>
+        </svg>
+        <svg class="pen-layer" id="pen-layer" xmlns="http://www.w3.org/2000/svg"></svg>
+
+        <div class="frame" style="left: 180px; top: 100px; width: 580px; height: 270px;">
+          <div class="frame-label editable-title" ondblclick="makeEditable(this)">◆ Discovery</div>
+        </div>
+
+        <div class="sticky s-yellow font-sans" style="left: 210px; top: 145px;">
+          <div class="sticky-tags"><span class="sticky-tag editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">INSIGHT</span></div>
+          <div class="sticky-content">Players want instant PIX, not email receipts.</div>
+        </div>
+        <div class="sticky s-pink font-sans" style="left: 400px; top: 160px;">
+          <div class="sticky-tags"><span class="sticky-tag editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">PROBLEM</span></div>
+          <span class="sticky-emoji">⚠️</span>
+          <div class="sticky-content">Curaçao licence limits BR processors.</div>
+        </div>
+        <div class="sticky s-blue font-sans" style="left: 590px; top: 145px;">
+          <div class="sticky-tags"><span class="sticky-tag editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">OPPORTUNITY</span></div>
+          <div class="sticky-content">Self-exclusion API auto-blocks.</div>
+        </div>
+        <div class="sticky s-lime font-hand" style="left: 250px; top: 280px;">
+          <span class="sticky-emoji">💡</span>
+          <div class="sticky-content">Tier emails by KYC level!</div>
+        </div>
+        <div class="sticky s-lilac font-sans" style="left: 470px; top: 290px;">
+          <div class="sticky-tags"><span class="sticky-tag editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">QUESTION</span></div>
+          <div class="sticky-content">Retention post self-exclusion?</div>
+        </div>
+
+        <div class="sticky s-peach font-sans" style="left: 210px; top: 460px;">
+          <div class="sticky-tags"><span class="sticky-tag editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">IDEA</span></div>
+          <div class="sticky-content">Use WhatsApp Business for follow-ups in BR.</div>
+        </div>
+        <div class="sticky s-mint font-sans" style="left: 400px; top: 460px;">
+          <div class="sticky-tags"><span class="sticky-tag editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">RISK</span></div>
+          <div class="sticky-content">GDPR breach if KYC data sits on US servers.</div>
+        </div>
+        <div class="sticky s-blue font-sans" style="left: 590px; top: 460px;">
+          <div class="sticky-tags"><span class="sticky-tag editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">INSIGHT</span></div>
+          <div class="sticky-content">Mobile traffic is 87% of BR sessions.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOCS -->
+    <div class="view-panel" id="docs-panel">
+      <div class="docs-layout">
+        <div class="docs-tree">
+          <div class="outline-label" style="font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;color:var(--ink-soft);margin-bottom:10px;">Pages</div>
+          <div class="doc-item active">📄 Campaign Brief</div>
+          <div class="doc-item" style="margin-left:12px;">📄 Legal review</div>
+          <div class="doc-item">📄 Compliance checklist</div>
+        </div>
+        <div class="docs-content">
+          <h1 class="doc-title">Q2 Campaign<br>Brief — <em>Brazil</em></h1>
+
+          <div class="ai-summary-block empty" id="ai-summary-block">
+            <div class="ai-summary-label">
+              <span>✨ AI SUMMARY</span>
+              <button class="gen-btn" onclick="aiSummariseDoc()" id="ai-summary-btn">Generate</button>
+            </div>
+            <div id="ai-summary-content" style="font-size:13px;">Click Generate to have Claude summarise this doc in 3 bullets.</div>
+          </div>
+
+          <div class="callout">
+            <strong>◆ Compliance Note</strong>
+            Curaçao-licensed operators cannot use locally-licensed BR payment processors. This brief assumes PSP-routed PIX only.
+          </div>
+
+          <h2>Objective</h2>
+          <p id="doc-obj">Re-engage 24,000 dormant players (no deposit in 60+ days) with a segmented email flow that respects self-exclusion flags, honours opt-out preferences, and clears compliance review on a per-jurisdiction basis. The primary goal is an 18% reactivation rate within 14 days of launch, with zero compliance flags logged during the window.</p>
+
+          <h2>Why now</h2>
+          <ul id="doc-why">
+            <li>Reactivation window closes end of Q2 before seasonal dip in Brazilian gambling activity</li>
+            <li>Self-exclusion API is finally production-ready and can integrate with our email builder for per-player exclusion checks</li>
+            <li>Three PSP partners cleared for PIX rails after a six-week legal review process</li>
+            <li>Competitor activity shows a 22% uptick in reactivation campaigns across the LATAM market this quarter</li>
+          </ul>
+
+          <h2>Approach</h2>
+          <p id="doc-approach">Three-email sequence, triggered on player segment. Sequence logic lives in the Launch Board. Each variant is gated by jurisdiction rules and KYC tier — players under tier 2 only receive the intro email with no offer. High-value segments get PSP routing to our fastest provider. All emails carry a visible self-exclusion link in the footer and pass through the compliance disclaimer library before send.</p>
+
+          <h2>Open decisions</h2>
+          <ul id="doc-decisions">
+            <li>Do we include the PIX QR directly in the email, or gate it behind login for better fraud protection?</li>
+            <li>Which PSP gets priority routing for high-value segments — the one with lowest fees or the one with fastest settlement?</li>
+            <li>What's our retention policy for soft-bounced email addresses post-campaign?</li>
+          </ul>
+        </div>
+        <div class="docs-outline">
+          <div class="outline-label">On this page</div>
+          <a class="outline-item active">Objective</a>
+          <a class="outline-item">Why now</a>
+          <a class="outline-item">Approach</a>
+          <a class="outline-item">Open decisions</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- KANBAN -->
+    <div class="view-panel" id="kanban-panel">
+      <div class="kanban-board">
+        <div class="kanban-col">
+          <div class="kanban-header">
+            <div class="kanban-title"><div class="status-dot" style="background:#888;"></div>Backlog</div>
+            <div class="kanban-count" id="backlog-count">3</div>
+          </div>
+          <div class="kanban-cards" id="backlog-cards">
+            <div class="kanban-card"><span class="card-tag tag-research">Research</span><div class="card-title">Audit PSP options for BR routing</div><div class="card-footer"><div class="card-meta"><span>◆ Apr 28</span></div><div class="mini-avatar" style="background:#ffb8c8;">MR</div></div></div>
+            <div class="kanban-card"><span class="card-tag tag-content">Content</span><div class="card-title">Draft PT email copy</div><div class="card-footer"><div class="card-meta"><span>◆ May 02</span></div><div class="mini-avatar" style="background:#c8f24c;">JK</div></div></div>
+            <div class="kanban-card"><span class="card-tag tag-design">Design</span><div class="card-title">Mobile-first email template</div><div class="card-footer"><div class="card-meta"><span>◆ May 05</span></div><div class="mini-avatar" style="background:#a8d8ff;">SP</div></div></div>
+          </div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-header">
+            <div class="kanban-title"><div class="status-dot" style="background:var(--accent);"></div>In progress</div>
+            <div class="kanban-count">2</div>
+          </div>
+          <div class="kanban-cards">
+            <div class="kanban-card"><span class="card-tag tag-urgent">Urgent</span><div class="card-title">Wire self-exclusion API</div><div class="card-footer"><div class="card-meta"><span>◆ Apr 26</span></div><div class="mini-avatar" style="background:#ffb8c8;">MR</div></div></div>
+            <div class="kanban-card"><span class="card-tag tag-eng">Engineering</span><div class="card-title">Segmentation: KYC × jurisdiction</div><div class="card-footer"><div class="card-meta"><span>◆ Apr 30</span></div><div class="mini-avatar" style="background:#a8d8ff;">SP</div></div></div>
+          </div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-header">
+            <div class="kanban-title"><div class="status-dot" style="background:#d4b8ff;"></div>Review</div>
+            <div class="kanban-count">1</div>
+          </div>
+          <div class="kanban-cards">
+            <div class="kanban-card"><span class="card-tag tag-design">Design</span><div class="card-title">Landing page mocks</div><div class="card-footer"><div class="card-meta"><span>◆ Apr 24</span></div><div class="mini-avatar" style="background:#a8d8ff;">SP</div></div></div>
+          </div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-header">
+            <div class="kanban-title"><div class="status-dot" style="background:#c8f24c;"></div>Shipped</div>
+            <div class="kanban-count">2</div>
+          </div>
+          <div class="kanban-cards">
+            <div class="kanban-card" style="opacity:0.7;"><span class="card-tag tag-content">Content</span><div class="card-title">Brand voice guide</div><div class="card-footer"><div class="card-meta"><span>✓ Apr 15</span></div><div class="mini-avatar" style="background:#c8f24c;">JK</div></div></div>
+            <div class="kanban-card" style="opacity:0.7;"><span class="card-tag tag-eng">Engineering</span><div class="card-title">Webhook PSP callbacks</div><div class="card-footer"><div class="card-meta"><span>✓ Apr 12</span></div><div class="mini-avatar" style="background:#ffb8c8;">MR</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALENDAR -->
+    <div class="view-panel" id="calendar-panel">
+      <div class="cal-container">
+        <div class="cal-toolbar"><h2 class="cal-month">April <em>2026</em></h2></div>
+        <div class="cal-grid">
+          <div class="cal-day-label">Mon</div><div class="cal-day-label">Tue</div><div class="cal-day-label">Wed</div><div class="cal-day-label">Thu</div><div class="cal-day-label">Fri</div><div class="cal-day-label">Sat</div><div class="cal-day-label">Sun</div>
+          <div class="cal-day other-month"><div class="cal-date">30</div></div>
+          <div class="cal-day other-month"><div class="cal-date">31</div></div>
+          <div class="cal-day"><div class="cal-date">1</div></div>
+          <div class="cal-day"><div class="cal-date">2</div></div>
+          <div class="cal-day"><div class="cal-date">3</div></div>
+          <div class="cal-day"><div class="cal-date">4</div></div>
+          <div class="cal-day"><div class="cal-date">5</div></div>
+          <div class="cal-day"><div class="cal-date">6</div></div>
+          <div class="cal-day"><div class="cal-date">7</div></div>
+          <div class="cal-day"><div class="cal-date">8</div></div>
+          <div class="cal-day"><div class="cal-date">9</div></div>
+          <div class="cal-day"><div class="cal-date">10</div></div>
+          <div class="cal-day"><div class="cal-date">11</div></div>
+          <div class="cal-day"><div class="cal-date">12</div></div>
+          <div class="cal-day"><div class="cal-date">13</div></div>
+          <div class="cal-day"><div class="cal-date">14</div></div>
+          <div class="cal-day"><div class="cal-date">15</div><div class="cal-event ev-content">Voice ship</div></div>
+          <div class="cal-day"><div class="cal-date">16</div></div>
+          <div class="cal-day"><div class="cal-date">17</div></div>
+          <div class="cal-day"><div class="cal-date">18</div></div>
+          <div class="cal-day"><div class="cal-date">19</div></div>
+          <div class="cal-day"><div class="cal-date">20</div></div>
+          <div class="cal-day"><div class="cal-date">21</div></div>
+          <div class="cal-day"><div class="cal-date">22</div></div>
+          <div class="cal-day"><div class="cal-date">23</div><div class="cal-event ev-eng">Audit log</div></div>
+          <div class="cal-day today"><div class="cal-date">24 <span class="cal-today-pill">today</span></div><div class="cal-event ev-design">Landing</div></div>
+          <div class="cal-day"><div class="cal-date">25</div></div>
+          <div class="cal-day"><div class="cal-date">26</div><div class="cal-event ev-urgent">Self-excl API</div></div>
+          <div class="cal-day"><div class="cal-date">27</div></div>
+          <div class="cal-day"><div class="cal-date">28</div><div class="cal-event ev-design">PSP audit</div></div>
+          <div class="cal-day"><div class="cal-date">29</div></div>
+          <div class="cal-day"><div class="cal-date">30</div><div class="cal-event ev-eng">Segment</div></div>
+          <div class="cal-day other-month"><div class="cal-date">1</div></div>
+          <div class="cal-day other-month"><div class="cal-date">2</div></div>
+          <div class="cal-day other-month"><div class="cal-date">3</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIMELINE -->
+    <div class="view-panel" id="timeline-panel">
+      <div class="timeline-container">
+        <h2 class="cal-month" style="margin-bottom:16px;">Q2 <em>timeline</em></h2>
+        <div class="timeline-header">
+          <div></div>
+          <div class="tl-week">W14</div><div class="tl-week">W15</div><div class="tl-week">W16</div>
+          <div class="tl-week now">W17◆NOW</div>
+          <div class="tl-week">W18</div><div class="tl-week">W19</div><div class="tl-week">W20</div>
+          <div class="tl-week">W21</div><div class="tl-week">W22</div><div class="tl-week">W23</div>
+          <div class="tl-week">W24</div><div class="tl-week">W25</div>
+        </div>
+        <div class="tl-swim"><div class="tl-swim-label"><span class="status-dot" style="background:#ffb8c8;"></span>Research</div><div class="tl-track"><div class="tl-bar" style="left:2%;width:22%;background:#ffb8c8;">PSP audit</div></div></div>
+        <div class="tl-swim"><div class="tl-swim-label"><span class="status-dot" style="background:#c8f24c;"></span>Content</div><div class="tl-track"><div class="tl-bar" style="left:28%;width:30%;background:#c8f24c;">PT copy</div></div></div>
+        <div class="tl-swim"><div class="tl-swim-label"><span class="status-dot" style="background:#a8d8ff;"></span>Engineering</div><div class="tl-track"><div class="tl-bar" style="left:22%;width:40%;background:#a8d8ff;">Self-excl + segment</div></div></div>
+        <div class="tl-swim"><div class="tl-swim-label"><span class="status-dot" style="background:#d4b8ff;"></span>Design</div><div class="tl-track"><div class="tl-bar" style="left:18%;width:22%;background:#d4b8ff;">Landing + emails</div></div></div>
+        <div class="tl-swim"><div class="tl-swim-label"><span class="status-dot" style="background:var(--accent);"></span>Launch</div><div class="tl-track"><div class="tl-bar" style="left:68%;width:18%;background:var(--accent);color:white;">LAUNCH</div></div></div>
+      </div>
+    </div>
+
+    <!-- MIND MAP -->
+    <div class="view-panel mindmap-view" id="mindmap-panel">
+      <div class="mm-toolbar-left">
+        <button class="mm-tool-btn active"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="3" cy="8" r="1.5"/><path d="M5 8h3M8 4l3-1M8 8l3 0M8 12l3 1"/><circle cx="12" cy="3" r="1.5"/><circle cx="12" cy="8" r="1.5"/><circle cx="12" cy="13" r="1.5"/></svg></button>
+      </div>
+      <div class="mm-toolbar">
+        <button class="action-chip primary" onclick="aiExpandBranch()" id="ai-expand-btn"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1L10 6L15 8L10 10L8 15L6 10L1 8L6 6z"/></svg><span>AI expand selected</span></button>
+      </div>
+      <div class="mm-surface" id="mm-surface">
+        <svg class="mm-svg" id="mm-svg" viewBox="0 0 2200 1200" preserveAspectRatio="none">
+          <g stroke="var(--ink-soft)" stroke-width="2" fill="none" opacity="0.4">
+            <path d="M1100 600 C 1000 600, 900 400, 800 400"/>
+            <path d="M1100 600 C 1200 600, 1300 400, 1400 400"/>
+            <path d="M1100 600 C 1000 600, 900 800, 800 800"/>
+            <path d="M1100 600 C 1200 600, 1300 800, 1400 800"/>
+          </g>
+        </svg>
+
+        <div class="mm-node mm-root" style="left: 1020px; top: 560px;" data-id="root"><span>Q2 Brazil <em>reactivation</em></span></div>
+        <div class="mm-node mm-branch-1" style="left: 700px; top: 380px;" data-id="compliance"><span>Compliance</span></div>
+        <div class="mm-node mm-branch-2" style="left: 1320px; top: 380px;" data-id="payments"><span>Payments</span></div>
+        <div class="mm-node mm-branch-3" style="left: 700px; top: 780px;" data-id="segmentation"><span>Segmentation</span></div>
+        <div class="mm-node mm-branch-4" style="left: 1320px; top: 780px;" data-id="creative"><span>Creative</span></div>
+      </div>
+    </div>
+
+    <!-- DATABASE -->
+    <div class="view-panel" id="database-panel">
+      <div class="db-container">
+        <div class="db-toolbar"><button class="db-chip active">All tasks</button><button class="db-chip">Status</button><button class="db-chip">Owner</button></div>
+        <table class="db-table">
+          <thead><tr><th style="width:40%;">Task</th><th>Status</th><th>Tag</th><th>Owner</th><th>Due</th></tr></thead>
+          <tbody>
+            <tr><td>Audit PSP options</td><td><span class="db-status st-backlog">Backlog</span></td><td>Research</td><td>Marco R.</td><td>Apr 28</td></tr>
+            <tr><td>Draft PT email copy</td><td><span class="db-status st-backlog">Backlog</span></td><td>Content</td><td>Jodi K.</td><td>May 02</td></tr>
+            <tr><td>Wire self-exclusion API</td><td><span class="db-status st-progress">Progress</span></td><td>Urgent</td><td>Marco R.</td><td>Apr 26</td></tr>
+            <tr><td>Landing page mocks</td><td><span class="db-status st-review">Review</span></td><td>Design</td><td>Sana P.</td><td>Apr 24</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ===== SETTINGS MODAL ===== -->
+<div class="modal-backdrop" id="settings-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h2>Connect <em>AI</em></h2>
+        <p>Wire Kanvas to Claude for real AI features.</p>
+      </div>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="ai-banner">
+        <strong>◆ HOW THIS WORKS</strong>
+        Your Claude API key is stored only in your browser (localStorage). It's sent directly to Anthropic when you use an AI feature — never to any Kanvas server. You pay only for what you use (fractions of a penny per request).
+      </div>
+
+      <div class="setting-row">
+        <label class="setting-label">◆ CLAUDE API KEY</label>
+        <input class="setting-input" id="api-key-input" type="password" placeholder="sk-ant-api03-..." autocomplete="off">
+        <div class="setting-help">
+          Don't have one? <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Get a key at console.anthropic.com</a> — free tier includes $5 of credit.
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <label class="setting-label">◆ MODEL</label>
+        <select class="setting-input" id="model-select">
+          <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 · fastest &amp; cheapest (recommended)</option>
+          <option value="claude-sonnet-4-6">Claude Sonnet 4.6 · smarter, slower</option>
+          <option value="claude-opus-4-7">Claude Opus 4.7 · most capable</option>
+        </select>
+        <div class="setting-help">Haiku is perfect for Kanvas's short AI tasks. A typical cluster/summarise call costs less than $0.001.</div>
+      </div>
+
+      <div id="conn-status" style="display:none;"></div>
+
+      <div style="display:flex;gap:8px;margin-top:20px;">
+        <button class="btn" onclick="closeSettings()" style="flex:1;">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSettings()" style="flex:1;" id="save-btn">Save &amp; test</button>
+        <button class="btn" onclick="clearKey()" id="clear-btn" style="display:none;">Clear key</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== IMAGE MODAL ===== -->
+<div class="modal-backdrop" id="image-modal">
+  <div class="modal wide">
+    <div class="modal-header">
+      <div><h2>Add an <em>image</em></h2><p>Upload, paste a URL, or pick stock.</p></div>
+      <button class="modal-close" onclick="closeImageModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="img-options">
+        <div class="img-option" onclick="alert('Opens file browser in real app')">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v12M7 8l5-5 5 5"/></svg>
+          <h4>Upload file</h4>
+          <p>PNG, JPG up to 30MB</p>
+        </div>
+        <div class="img-option" onclick="document.getElementById('url-in').focus()">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1"/><path d="M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1"/></svg>
+          <h4>Paste URL</h4>
+          <p>Any image link from the web</p>
+        </div>
+      </div>
+      <div class="url-input-wrap">
+        <label>◆ IMAGE URL</label>
+        <div style="display:flex;gap:6px;">
+          <input class="url-input" id="url-in" placeholder="https://example.com/image.jpg">
+          <button class="btn btn-primary" onclick="addImageFromUrl()">Add</button>
+        </div>
+      </div>
+      <div style="margin-top:18px;">
+        <label style="font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;color:var(--ink-soft);display:block;margin-bottom:8px;">◆ STOCK LIBRARY</label>
+        <div class="stock-grid">
+          <div class="stock-img" onclick="addStockImage('https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&q=80')"><img src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=200&q=80"></div>
+          <div class="stock-img" onclick="addStockImage('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&q=80')"><img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=200&q=80"></div>
+          <div class="stock-img" onclick="addStockImage('https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&q=80')"><img src="https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=200&q=80"></div>
+          <div class="stock-img" onclick="addStockImage('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&q=80')"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=200&q=80"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI LOADING OVERLAY -->
+<div class="ai-loading" id="ai-loading">
+  <div class="ai-spinner"></div>
+  <span id="ai-loading-msg">Thinking...</span>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">Ready</div>
+
+<script>
+  // ====================================================================
+  // ======== CLAUDE API CONNECTION ========
+  // ====================================================================
+
+  const LS_KEY = 'kanvas_claude_key';
+  const LS_MODEL = 'kanvas_claude_model';
+
+  function getApiKey() { return localStorage.getItem(LS_KEY) || ''; }
+  function getModel() { return localStorage.getItem(LS_MODEL) || 'claude-haiku-4-5-20251001'; }
+  function hasApiKey() { return !!getApiKey(); }
+
+  function updateAIStatus() {
+    const dot = document.getElementById('ai-status-dot');
+    dot.classList.toggle('connected', hasApiKey());
+    // Disable AI buttons if no key
+    document.querySelectorAll('.action-chip.primary').forEach(b => {
+      b.disabled = !hasApiKey();
+      b.title = hasApiKey() ? b.title : 'Connect AI in settings (⚙ icon) first';
+    });
+    const sumBtn = document.getElementById('ai-summary-btn');
+    if (sumBtn) sumBtn.disabled = !hasApiKey();
+  }
+
+  /**
+   * Call Claude with a user message. Returns the text response.
+   * Throws on error (caller shows toast).
+   */
+  async function callClaude(userMessage, systemPrompt = '') {
+    if (!hasApiKey()) throw new Error('No API key — connect AI in settings first.');
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': getApiKey(),
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: getModel(),
+        max_tokens: 1024,
+        system: systemPrompt || undefined,
+        messages: [{ role: 'user', content: userMessage }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = err?.error?.message || `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    return data.content[0].text;
+  }
+
+  /**
+   * Extract JSON from Claude's response, which may be wrapped in markdown fences.
+   */
+  function parseJson(text) {
+    let t = text.trim();
+    // Strip ```json ... ``` or ``` ... ```
+    const match = t.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (match) t = match[1];
+    return JSON.parse(t);
+  }
+
+  function showAiLoading(msg) {
+    document.getElementById('ai-loading-msg').textContent = msg;
+    document.getElementById('ai-loading').classList.add('show');
+  }
+  function hideAiLoading() { document.getElementById('ai-loading').classList.remove('show'); }
+
+  // ====================================================================
+  // ======== AI FEATURE 1 — SUMMARISE DOC ========
+  // ====================================================================
+  async function aiSummariseDoc() {
+    if (!hasApiKey()) { openSettings(); return; }
+
+    const block = document.getElementById('ai-summary-block');
+    const content = document.getElementById('ai-summary-content');
+    const btn = document.getElementById('ai-summary-btn');
+
+    btn.disabled = true;
+    btn.textContent = 'Thinking...';
+    showAiLoading('✨ Summarising doc...');
+
+    // Collect the doc text
+    const docText = [
+      'Q2 Campaign Brief — Brazil',
+      'Objective: ' + document.getElementById('doc-obj').textContent,
+      'Why now: ' + Array.from(document.getElementById('doc-why').querySelectorAll('li')).map(l => l.textContent).join(' | '),
+      'Approach: ' + document.getElementById('doc-approach').textContent,
+      'Open decisions: ' + Array.from(document.getElementById('doc-decisions').querySelectorAll('li')).map(l => l.textContent).join(' | ')
+    ].join('\n\n');
+
+    try {
+      const reply = await callClaude(
+        `Summarise this document in exactly 3 short bullets (max 12 words each). Focus on the most critical facts a busy team member needs. Return ONLY a JSON array of strings, no other text. Example: ["first bullet", "second bullet", "third bullet"]\n\nDocument:\n${docText}`,
+        'You are a concise executive assistant. Return only valid JSON.'
+      );
+      const bullets = parseJson(reply);
+      block.classList.remove('empty');
+      content.innerHTML = '<ul>' + bullets.map(b => `<li>${escapeHtml(b)}</li>`).join('') + '</ul>';
+      btn.textContent = 'Regenerate';
+      showToast('✨ Summary ready');
+    } catch (e) {
+      showToast('AI error: ' + e.message);
+      btn.textContent = 'Generate';
+    } finally {
+      btn.disabled = false;
+      hideAiLoading();
+    }
+  }
+
+  // ====================================================================
+  // ======== AI FEATURE 2 — CLUSTER STICKIES BY THEME ========
+  // ====================================================================
+  async function aiClusterStickies() {
+    if (!hasApiKey()) { openSettings(); return; }
+
+    const stickies = Array.from(document.querySelectorAll('#canvas-panel .sticky'));
+    if (stickies.length === 0) { showToast('No stickies to cluster'); return; }
+
+    showAiLoading('✨ Clustering stickies by theme...');
+
+    const items = stickies.map((s, i) => ({
+      id: i,
+      tag: s.querySelector('.sticky-tag')?.textContent || '',
+      text: s.querySelector('.sticky-content')?.textContent || ''
+    }));
+
+    try {
+      const reply = await callClaude(
+        `Group these sticky notes into 3-5 themes based on content similarity. Return ONLY valid JSON in this exact shape:\n{"themes": [{"name": "short theme name (1-3 words)", "sticky_ids": [0, 3, 5]}, ...]}\n\nStickies:\n${JSON.stringify(items)}`,
+        'You are an expert workshop facilitator. Return only valid JSON.'
+      );
+      const { themes } = parseJson(reply);
+
+      // Visually group: give each theme a column position, lay out stickies
+      const themeColors = ['s-yellow', 's-blue', 's-lime', 's-lilac', 's-peach'];
+      const surface = document.getElementById('canvas-surface');
+      const startX = surface.scrollLeft + 80;
+      const startY = surface.scrollTop + 620;
+
+      themes.forEach((theme, ti) => {
+        // Add a frame label for each theme
+        const label = document.createElement('div');
+        label.style.position = 'absolute';
+        label.style.left = (startX + ti * 200) + 'px';
+        label.style.top = startY + 'px';
+        label.style.fontFamily = "'JetBrains Mono', monospace";
+        label.style.fontSize = '11px';
+        label.style.textTransform = 'uppercase';
+        label.style.letterSpacing = '0.1em';
+        label.style.color = 'var(--accent)';
+        label.style.fontWeight = '700';
+        label.textContent = `◆ ${theme.name}`;
+        surface.appendChild(label);
+
+        // Move matching stickies into this column
+        theme.sticky_ids.forEach((id, si) => {
+          const sticky = stickies[id];
+          if (!sticky) return;
+          sticky.style.transition = 'left 0.6s, top 0.6s';
+          sticky.style.left = (startX + ti * 200) + 'px';
+          sticky.style.top = (startY + 30 + si * 140) + 'px';
+          setTimeout(() => sticky.style.transition = '', 700);
+        });
+      });
+
+      showToast(`✨ Found ${themes.length} themes`);
+    } catch (e) {
+      showToast('AI error: ' + e.message);
+    } finally {
+      hideAiLoading();
+    }
+  }
+
+  // ====================================================================
+  // ======== AI FEATURE 3 — CONVERT STICKIES TO KANBAN CARDS ========
+  // ====================================================================
+  async function aiConvertToCards() {
+    if (!hasApiKey()) { openSettings(); return; }
+
+    const stickies = Array.from(document.querySelectorAll('#canvas-panel .sticky'));
+    if (stickies.length === 0) { showToast('No stickies to convert'); return; }
+
+    showAiLoading('✨ Turning ideas into actionable cards...');
+
+    const items = stickies.map(s => ({
+      tag: s.querySelector('.sticky-tag')?.textContent || '',
+      text: s.querySelector('.sticky-content')?.textContent || ''
+    }));
+
+    try {
+      const reply = await callClaude(
+        `Convert these sticky notes into actionable kanban tasks. Skip notes that are questions or observations — only create tasks for things that need doing. Return ONLY valid JSON in this exact shape:\n{"cards": [{"title": "concrete action title, max 10 words, starts with verb", "category": "research|content|design|eng|urgent"}, ...]}\n\nStickies:\n${JSON.stringify(items)}`,
+        'You are a project manager. Turn ideas into concrete tasks. Return only valid JSON.'
+      );
+      const { cards } = parseJson(reply);
+
+      const backlog = document.getElementById('backlog-cards');
+      const tagClass = { research: 'tag-research', content: 'tag-content', design: 'tag-design', eng: 'tag-eng', urgent: 'tag-urgent' };
+
+      // Switch to kanban, then animate cards in
+      switchView('kanban');
+
+      cards.forEach((card, i) => {
+        setTimeout(() => {
+          const el = document.createElement('div');
+          el.className = 'kanban-card';
+          el.style.borderColor = 'var(--accent)';
+          el.innerHTML = `
+            <span class="card-tag tag-ai">✨ AI ${(card.category || 'task').toUpperCase()}</span>
+            <div class="card-title">${escapeHtml(card.title)}</div>
+            <div class="card-footer">
+              <div class="card-meta"><span>◆ AI-generated</span></div>
+              <div class="mini-avatar" style="background:var(--accent);color:white;">AI</div>
+            </div>`;
+          backlog.insertBefore(el, backlog.firstChild);
+          setTimeout(() => el.style.borderColor = '', 1500);
+          document.getElementById('backlog-count').textContent = backlog.children.length;
+        }, i * 250);
+      });
+
+      showToast(`✨ Created ${cards.length} cards`);
+    } catch (e) {
+      showToast('AI error: ' + e.message);
+    } finally {
+      hideAiLoading();
+    }
+  }
+
+  // ====================================================================
+  // ======== AI FEATURE 4 — EXPAND MIND MAP NODE ========
+  // ====================================================================
+  async function aiExpandBranch() {
+    if (!hasApiKey()) { openSettings(); return; }
+
+    // Must select a node first
+    if (!selectedEl || !selectedEl.classList.contains('mm-node')) {
+      showToast('Click a mind map node first, then AI expand');
+      return;
+    }
+
+    const nodeText = selectedEl.querySelector('span')?.textContent || selectedEl.textContent;
+    const rootText = document.querySelector('.mm-root span')?.textContent || '';
+
+    showAiLoading(`✨ Expanding "${nodeText}"...`);
+
+    try {
+      const reply = await callClaude(
+        `You are helping build a mind map. The root topic is: "${rootText}". The user wants to expand this branch: "${nodeText}". Generate 4 specific sub-topics (each 1-4 words) that would naturally branch off this node. Context: this is for an iGaming compliance team planning a Brazilian market campaign. Return ONLY valid JSON: {"children": ["topic 1", "topic 2", "topic 3", "topic 4"]}`,
+        'You are a domain expert in iGaming, compliance, and payments. Return only valid JSON.'
+      );
+      const { children } = parseJson(reply);
+
+      // Get selected node position
+      const rect = {
+        x: parseFloat(selectedEl.style.left),
+        y: parseFloat(selectedEl.style.top)
+      };
+
+      const surface = document.getElementById('mm-surface');
+      const svg = document.getElementById('mm-svg');
+      const svgNs = 'http://www.w3.org/2000/svg';
+
+      // Determine direction: left or right of root
+      const rootX = 1020;
+      const isLeft = rect.x < rootX;
+      const offsetX = isLeft ? -280 : 280;
+
+      children.forEach((text, i) => {
+        setTimeout(() => {
+          const newX = rect.x + offsetX;
+          const newY = rect.y - 60 + (i * 50);
+
+          const node = document.createElement('div');
+          node.className = 'mm-node mm-leaf';
+          node.style.left = newX + 'px';
+          node.style.top = newY + 'px';
+          node.style.borderColor = 'var(--accent)';
+          node.textContent = text;
+          surface.appendChild(node);
+          attachInteractions(node);
+
+          // Draw connector
+          const path = document.createElementNS(svgNs, 'path');
+          const srcX = rect.x + (isLeft ? 0 : 100);
+          const srcY = rect.y + 20;
+          const dstX = newX + (isLeft ? 80 : 0);
+          const dstY = newY + 15;
+          const cX = (srcX + dstX) / 2;
+          path.setAttribute('d', `M ${srcX} ${srcY} C ${cX} ${srcY}, ${cX} ${dstY}, ${dstX} ${dstY}`);
+          path.setAttribute('stroke', 'var(--accent)');
+          path.setAttribute('stroke-width', '1.5');
+          path.setAttribute('fill', 'none');
+          path.setAttribute('opacity', '0.6');
+          svg.querySelector('g').appendChild(path);
+
+          setTimeout(() => node.style.borderColor = '', 2000);
+        }, i * 200);
+      });
+
+      showToast(`✨ Added ${children.length} branches`);
+    } catch (e) {
+      showToast('AI error: ' + e.message);
+    } finally {
+      hideAiLoading();
+    }
+  }
+
+  // ====================================================================
+  // ======== SETTINGS ========
+  // ====================================================================
+  function openSettings() {
+    document.getElementById('api-key-input').value = getApiKey();
+    document.getElementById('model-select').value = getModel();
+    document.getElementById('clear-btn').style.display = hasApiKey() ? 'block' : 'none';
+    document.getElementById('conn-status').style.display = 'none';
+    document.getElementById('settings-modal').classList.add('open');
+  }
+  function closeSettings() { document.getElementById('settings-modal').classList.remove('open'); }
+
+  async function saveSettings() {
+    const key = document.getElementById('api-key-input').value.trim();
+    const model = document.getElementById('model-select').value;
+    const status = document.getElementById('conn-status');
+    const saveBtn = document.getElementById('save-btn');
+
+    if (!key) { showToast('Paste your API key first'); return; }
+    if (!key.startsWith('sk-ant-')) { showToast('That doesn\'t look like a Claude API key'); return; }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Testing...';
+
+    // Save then test
+    localStorage.setItem(LS_KEY, key);
+    localStorage.setItem(LS_MODEL, model);
+
+    try {
+      const reply = await callClaude('Reply with just the word: connected', 'You are a test. Reply with exactly one word.');
+      status.style.display = 'flex';
+      status.className = 'conn-status ok';
+      status.innerHTML = `<span class="dot"></span> Connected — Claude replied: "${reply.trim().slice(0, 40)}"`;
+      updateAIStatus();
+      saveBtn.textContent = 'Done';
+      setTimeout(closeSettings, 1200);
+    } catch (e) {
+      status.style.display = 'flex';
+      status.className = 'conn-status err';
+      status.innerHTML = `<span class="dot"></span> ${escapeHtml(e.message)}`;
+      localStorage.removeItem(LS_KEY);
+      updateAIStatus();
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save & test';
+    }
+  }
+
+  function clearKey() {
+    if (!confirm('Clear your saved API key?')) return;
+    localStorage.removeItem(LS_KEY);
+    updateAIStatus();
+    document.getElementById('api-key-input').value = '';
+    document.getElementById('clear-btn').style.display = 'none';
+    showToast('Key cleared');
+  }
+
+  // ====================================================================
+  // ======== REST OF APP (same as final version) ========
+  // ====================================================================
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function toggleTheme() {
+    const html = document.documentElement;
+    const next = html.dataset.theme === 'dark' ? 'light' : 'dark';
+    html.dataset.theme = next;
+    document.getElementById('theme-sun').style.display = next === 'dark' ? 'none' : 'block';
+    document.getElementById('theme-moon').style.display = next === 'dark' ? 'block' : 'none';
+  }
+
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sb-backdrop').classList.toggle('open');
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sb-backdrop').classList.remove('open');
+  }
+
+  function switchView(view) {
+    document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`.view-tab[data-view="${view}"]`).classList.add('active');
+    document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(`${view}-panel`).classList.add('active');
+    closeAllFlyouts();
+    hideCtxMenu();
+  }
+
+  document.querySelectorAll('.tool').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tool').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+    });
+  });
+
+  function toggleFlyout(name) {
+    const target = document.getElementById(`flyout-${name}`);
+    document.querySelectorAll('.flyout').forEach(f => { if (f !== target) f.classList.remove('open'); });
+    target.classList.toggle('open');
+  }
+  function closeAllFlyouts() { document.querySelectorAll('.flyout').forEach(f => f.classList.remove('open')); }
+
+  let selectedEl = null;
+  let currentShapeColor = '#a8d8ff';
+  const canvasSurface = document.getElementById('canvas-surface');
+
+  // Connector globals (declared early so init code can call attachAnchors)
+  const connectors = [];
+  let connectorIdSeq = 1;
+  let selectedConnector = null;
+  let drawingConn = null;
+  const connectorLayer = document.getElementById('connector-layer');
+
+  function attachInteractions(el) {
+    el.addEventListener('mousedown', e => {
+      if (penActive) return;
+      // If the user clicked on something interactive inside the sticky (a link,
+      // editable content, button), don't start a drag — let the browser handle
+      // text selection/focus/clicks naturally.
+      if (e.target.closest('a, button, [contenteditable="true"], .anchor-dot, .resize-handle')) return;
+      startDrag(el, e);
+      selectElement(el);
+    });
+    el.addEventListener('touchstart', e => {
+      if (penActive) return;
+      if (e.target.closest('a, button, [contenteditable="true"], .anchor-dot, .resize-handle')) return;
+      const t = e.touches[0];
+      startDrag(el, { clientX: t.clientX, clientY: t.clientY, preventDefault: () => e.preventDefault() });
+      selectElement(el);
+    }, { passive: false });
+    el.addEventListener('dblclick', e => {
+      const c = el.querySelector('.sticky-content') || el;
+      if (c.isContentEditable) return;
+      c.contentEditable = 'true';
+      c.focus();
+      // Place cursor at end of content
+      const range = document.createRange();
+      range.selectNodeContents(c);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      c.addEventListener('blur', () => c.contentEditable = 'false', { once: true });
+      e.stopPropagation();
+    });
+  }
+
+  function selectElement(el) {
+    if (selectedEl) selectedEl.classList.remove('selected');
+    selectedEl = el;
+    el.classList.add('selected');
+    showCtxMenu(el);
+  }
+  function deselect() {
+    if (selectedEl) selectedEl.classList.remove('selected');
+    selectedEl = null;
+    hideCtxMenu();
+  }
+
+  document.addEventListener('mousedown', e => {
+    if (!e.target.closest('.sticky, .shape, .text-el, .img-card, .mm-node, .ctx-menu, .flyout, .toolbar, .top-bar-canvas, .mm-toolbar, .mm-toolbar-left, .board-name, .modal, .sidebar, .topbar')) {
+      deselect();
+      closeAllFlyouts();
+    }
+  });
+
+  function showCtxMenu(el) {
+    const menu = document.getElementById('ctx-menu');
+    menu.classList.add('open');
+    if (window.innerWidth > 768) {
+      const rect = el.getBoundingClientRect();
+      const surfaceRect = canvasSurface.getBoundingClientRect();
+      menu.style.top = Math.max(8, rect.top - surfaceRect.top - 46) + 'px';
+      menu.style.left = Math.max(8, rect.left - surfaceRect.left) + 'px';
+    }
+  }
+  function hideCtxMenu() { document.getElementById('ctx-menu').classList.remove('open'); }
+
+  let dragEl = null, offX = 0, offY = 0, dragParent = null, dragMoved = false;
+  function startDrag(el, e) {
+    dragEl = el;
+    dragMoved = false;
+    // Re-parent the element to the canvas surface so its position is independent
+    // of any frame it was inside. This makes drag work uniformly across the canvas.
+    dragParent = canvasSurface;
+    const r = el.getBoundingClientRect();
+    const surfaceRect = canvasSurface.getBoundingClientRect();
+    if (el.parentElement !== canvasSurface) {
+      el.style.left = (r.left - surfaceRect.left + canvasSurface.scrollLeft) + 'px';
+      el.style.top = (r.top - surfaceRect.top + canvasSurface.scrollTop) + 'px';
+      canvasSurface.appendChild(el);
+    }
+    offX = e.clientX - r.left;
+    offY = e.clientY - r.top;
+    el.style.zIndex = 100;
+    // NOTE: do NOT preventDefault here — it would block focus events on
+    // editable children. We only preventDefault once movement actually starts.
+  }
+  document.addEventListener('mousemove', e => {
+    if (!dragEl) return;
+    dragMoved = true;
+    e.preventDefault(); // prevent text selection during actual drag
+    const surfaceRect = canvasSurface.getBoundingClientRect();
+    dragEl.style.left = (e.clientX - surfaceRect.left + canvasSurface.scrollLeft - offX) + 'px';
+    dragEl.style.top = (e.clientY - surfaceRect.top + canvasSurface.scrollTop - offY) + 'px';
+    if (selectedEl === dragEl) showCtxMenu(dragEl);
+    renderAllConnectors();
+  });
+  document.addEventListener('touchmove', e => {
+    if (!dragEl) return;
+    dragMoved = true;
+    const t = e.touches[0];
+    const surfaceRect = canvasSurface.getBoundingClientRect();
+    dragEl.style.left = (t.clientX - surfaceRect.left + canvasSurface.scrollLeft - offX) + 'px';
+    dragEl.style.top = (t.clientY - surfaceRect.top + canvasSurface.scrollTop - offY) + 'px';
+    e.preventDefault();
+    renderAllConnectors();
+  }, { passive: false });
+  document.addEventListener('mouseup', () => { if (dragEl) dragEl.style.zIndex = ''; dragEl = null; dragMoved = false; });
+  document.addEventListener('touchend', () => { if (dragEl) dragEl.style.zIndex = ''; dragEl = null; dragMoved = false; });
+
+  document.querySelectorAll('.sticky, .shape, .text-el, .img-card, .mm-node').forEach(attachInteractions);
+  // Frames and shapes get resize handles
+  document.querySelectorAll('.frame, .shape, .img-card').forEach(el => {
+    attachResizeHandles(el);
+    if (el.classList.contains('frame') && !el.dataset.frame) {
+      el.dataset.frame = '1';
+      el.style.pointerEvents = 'auto';
+      attachInteractions(el);
+    }
+  });
+  // Anchor dots for connectors — sticky/shape/frame/img-card all get them
+  document.querySelectorAll('.sticky, .shape, .frame, .img-card').forEach(attachAnchors);
+
+  function setSelectedColor(cls, hex, ev) {
+    if (!selectedEl) return;
+    if (selectedEl.classList.contains('sticky')) {
+      ['s-yellow','s-pink','s-blue','s-lilac','s-lime','s-peach','s-mint','s-white'].forEach(c => selectedEl.classList.remove(c));
+      selectedEl.classList.add(cls);
+    } else {
+      selectedEl.style.background = hex;
+    }
+    document.querySelectorAll('.ctx-color').forEach(c => c.classList.remove('active'));
+    if (ev && ev.target) ev.target.classList.add('active');
+  }
+
+  function setSelectedFont(cls) {
+    if (!selectedEl) return;
+    ['font-sans','font-serif','font-mono','font-hand','font-display','font-grotesk'].forEach(c => selectedEl.classList.remove(c));
+    selectedEl.classList.add(cls);
+  }
+
+  // Text colour: applies to the inner content of sticky/shape, or the element itself for plain text-el
+  function setSelectedTextColor(hex) {
+    if (!selectedEl) { showToast('Select something first'); return; }
+    const target = selectedEl.querySelector('.sticky-content')
+                || selectedEl.querySelector('.shape-label')
+                || selectedEl;
+    if (hex === '') {
+      target.style.color = '';
+      showToast('Text colour reset');
+    } else {
+      target.style.color = hex;
+    }
+    document.getElementById('text-color-popover').classList.remove('open');
+  }
+
+  function toggleTextColorPicker(e) {
+    e.stopPropagation();
+    document.getElementById('text-color-popover').classList.toggle('open');
+  }
+
+  // Close popover when clicking outside
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.text-color-popover, .ctx-btn[onclick*="toggleTextColorPicker"]')) {
+      const pop = document.getElementById('text-color-popover');
+      if (pop) pop.classList.remove('open');
+    }
+  });
+
+  function adjustFontSize(delta) {
+    if (!selectedEl) return;
+    const c = selectedEl.querySelector('.sticky-content') || selectedEl;
+    const current = parseFloat(window.getComputedStyle(c).fontSize);
+    c.style.fontSize = Math.max(9, current + delta * 2) + 'px';
+  }
+
+  function toggleSelectedBold() {
+    if (!selectedEl) return;
+    const c = selectedEl.querySelector('.sticky-content') || selectedEl;
+    const w = window.getComputedStyle(c).fontWeight;
+    c.style.fontWeight = (w === '700' || w === 'bold') ? '500' : '700';
+  }
+
+  function toggleSelectedItalic() {
+    if (!selectedEl) return;
+    const c = selectedEl.querySelector('.sticky-content') || selectedEl;
+    c.style.fontStyle = window.getComputedStyle(c).fontStyle === 'italic' ? 'normal' : 'italic';
+  }
+
+  function promptLink() {
+    if (!selectedEl) return;
+    const url = prompt('Enter URL:', 'https://');
+    if (!url || url === 'https://') return;
+    let link = selectedEl.querySelector('.sticky-link');
+    if (!link) {
+      link = document.createElement('a');
+      link.className = 'sticky-link';
+      selectedEl.appendChild(link);
+    }
+    link.href = url;
+    link.textContent = url.replace(/^https?:\/\//, '').slice(0, 30);
+    showToast('Link added');
+  }
+
+  function duplicateSelected() {
+    if (!selectedEl) return;
+    const clone = selectedEl.cloneNode(true);
+    clone.style.left = (parseInt(selectedEl.style.left) + 25) + 'px';
+    clone.style.top = (parseInt(selectedEl.style.top) + 25) + 'px';
+    clone.classList.remove('selected');
+    selectedEl.parentElement.appendChild(clone);
+    attachInteractions(clone);
+  }
+
+  function deleteSelected() {
+    if (!selectedEl) return;
+    selectedEl.remove();
+    selectedEl = null;
+    hideCtxMenu();
+  }
+
+  function addEmojiToSelected(emoji) {
+    if (!selectedEl) { showToast('Select a sticky first'); return; }
+    let em = selectedEl.querySelector('.sticky-emoji');
+    if (!em) {
+      em = document.createElement('span');
+      em.className = 'sticky-emoji';
+      selectedEl.appendChild(em);
+    }
+    em.textContent = emoji;
+    closeAllFlyouts();
+  }
+
+  function addSticky() {
+    const colors = ['s-yellow','s-pink','s-blue','s-lilac','s-lime','s-peach'];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const s = document.createElement('div');
+    s.className = `sticky ${color} font-sans`;
+    s.style.left = (canvasSurface.scrollLeft + 200 + Math.random() * 80) + 'px';
+    s.style.top = (canvasSurface.scrollTop + 150 + Math.random() * 80) + 'px';
+    s.innerHTML = `<div class="sticky-tags"><span class="sticky-tag editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">NEW</span></div><div class="sticky-content">Type here...</div>`;
+    canvasSurface.appendChild(s);
+    attachInteractions(s);
+    attachAnchors(s);
+    selectElement(s);
+    // Auto-focus into edit mode for the new sticky so user can type immediately.
+    const content = s.querySelector('.sticky-content');
+    content.contentEditable = 'true';
+    content.focus();
+    // Select all the placeholder text so typing replaces it
+    const range = document.createRange();
+    range.selectNodeContents(content);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    content.addEventListener('blur', () => content.contentEditable = 'false', { once: true });
+  }
+
+  function addText() {
+    const t = document.createElement('div');
+    t.className = 'text-el font-sans';
+    t.style.left = (canvasSurface.scrollLeft + 200 + Math.random() * 120) + 'px';
+    t.style.top = (canvasSurface.scrollTop + 150 + Math.random() * 100) + 'px';
+    t.style.fontSize = '18px';
+    t.textContent = 'Click to edit';
+    canvasSurface.appendChild(t);
+    attachInteractions(t);
+    selectElement(t);
+    // Auto-enter edit mode for the new text so user can type immediately,
+    // but only as a one-shot — clicking out exits edit mode and enables drag.
+    t.contentEditable = 'true';
+    t.focus();
+    const range = document.createRange();
+    range.selectNodeContents(t);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    t.addEventListener('blur', () => {
+      t.contentEditable = 'false';
+    }, { once: true });
+  }
+
+  function addShape(type) {
+    const sh = document.createElement('div');
+    sh.className = `shape ${type}`;
+    sh.style.left = (canvasSurface.scrollLeft + 300) + 'px';
+    sh.style.top = (canvasSurface.scrollTop + 250) + 'px';
+    sh.style.background = currentShapeColor;
+    sh.innerHTML = '<span class="shape-label" ondblclick="event.stopPropagation(); makeEditable(this)">Label</span>';
+    canvasSurface.appendChild(sh);
+    attachResizeHandles(sh);
+    attachInteractions(sh);
+    attachAnchors(sh);
+    selectElement(sh);
+    closeAllFlyouts();
+  }
+
+  // ===== EDITABLE TITLES =====
+  // Used by board name, frame labels, shape labels, etc.
+  function makeEditable(el) {
+    if (el.isContentEditable) return;
+    el.contentEditable = 'true';
+    el.classList.add('is-editing');
+    el.focus();
+    // Select all the current text so typing replaces it
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    el.addEventListener('blur', () => {
+      el.contentEditable = 'false';
+      el.classList.remove('is-editing');
+    }, { once: true });
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+      if (e.key === 'Escape') { e.preventDefault(); el.blur(); }
+    });
+  }
+
+  // ===== FRAMES (Miro-style) =====
+  const FRAME_PRESETS = {
+    custom: { w: 580, h: 320, label: 'Frame' },
+    fhd: { w: 1920 / 2, h: 1080 / 2, label: '1080p · 16:9' },
+    a4l: { w: 842 / 1.2, h: 595 / 1.2, label: 'A4 · landscape' },
+    a4p: { w: 595 / 1.2, h: 842 / 1.2, label: 'A4 · portrait' },
+    sq: { w: 600, h: 600, label: 'Square · 1:1' },
+    classic: { w: 1024 / 1.5, h: 768 / 1.5, label: '4:3 · classic' }
+  };
+
+  function addFrame(presetKey = 'custom') {
+    const preset = FRAME_PRESETS[presetKey] || FRAME_PRESETS.custom;
+    const frame = document.createElement('div');
+    frame.className = 'frame';
+    frame.style.left = (canvasSurface.scrollLeft + 200) + 'px';
+    frame.style.top = (canvasSurface.scrollTop + 120) + 'px';
+    frame.style.width = preset.w + 'px';
+    frame.style.height = preset.h + 'px';
+    frame.style.pointerEvents = 'auto'; // make it draggable & selectable
+    frame.dataset.frame = '1';
+    frame.innerHTML = `<div class="frame-label editable-title" ondblclick="event.stopPropagation(); makeEditable(this)">◆ ${preset.label}</div>`;
+    canvasSurface.appendChild(frame);
+    attachResizeHandles(frame);
+    attachInteractions(frame);
+    attachAnchors(frame);
+    selectElement(frame);
+    closeAllFlyouts();
+    showToast(`Frame added: ${preset.label}`);
+  }
+
+  // ===== RESIZE HANDLES =====
+  // Adds 8 corner+edge handles to any element.
+  function attachResizeHandles(el) {
+    if (el.dataset.resizable === '1') return;
+    el.dataset.resizable = '1';
+    const handles = ['nw','n','ne','e','se','s','sw','w'];
+    handles.forEach(dir => {
+      const h = document.createElement('div');
+      h.className = `resize-handle handle-${dir}`;
+      h.dataset.dir = dir;
+      h.addEventListener('mousedown', e => startResize(el, dir, e));
+      h.addEventListener('touchstart', e => {
+        const t = e.touches[0];
+        startResize(el, dir, { clientX: t.clientX, clientY: t.clientY, preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation() });
+      }, { passive: false });
+      el.appendChild(h);
+    });
+  }
+
+  let resizeEl = null, resizeDir = '', resizeStart = null;
+  function startResize(el, dir, e) {
+    resizeEl = el;
+    resizeDir = dir;
+    const r = el.getBoundingClientRect();
+    const surfaceRect = canvasSurface.getBoundingClientRect();
+    resizeStart = {
+      mx: e.clientX,
+      my: e.clientY,
+      left: r.left - surfaceRect.left + canvasSurface.scrollLeft,
+      top: r.top - surfaceRect.top + canvasSurface.scrollTop,
+      width: r.width,
+      height: r.height
+    };
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  document.addEventListener('mousemove', e => {
+    if (!resizeEl) return;
+    doResize(e.clientX, e.clientY);
+  });
+  document.addEventListener('touchmove', e => {
+    if (!resizeEl) return;
+    const t = e.touches[0];
+    doResize(t.clientX, t.clientY);
+    e.preventDefault();
+  }, { passive: false });
+  function doResize(mx, my) {
+    const dx = mx - resizeStart.mx;
+    const dy = my - resizeStart.my;
+    let { left, top, width, height } = resizeStart;
+    if (resizeDir.includes('e')) width = Math.max(40, resizeStart.width + dx);
+    if (resizeDir.includes('s')) height = Math.max(40, resizeStart.height + dy);
+    if (resizeDir.includes('w')) {
+      width = Math.max(40, resizeStart.width - dx);
+      left = resizeStart.left + (resizeStart.width - width);
+    }
+    if (resizeDir.includes('n')) {
+      height = Math.max(40, resizeStart.height - dy);
+      top = resizeStart.top + (resizeStart.height - height);
+    }
+    resizeEl.style.left = left + 'px';
+    resizeEl.style.top = top + 'px';
+    resizeEl.style.width = width + 'px';
+    resizeEl.style.height = height + 'px';
+    if (selectedEl === resizeEl) showCtxMenu(resizeEl);
+    renderAllConnectors();
+  }
+  document.addEventListener('mouseup', () => { resizeEl = null; });
+  document.addEventListener('touchend', () => { resizeEl = null; });
+
+  // ===== CUSTOM COLOUR PICKER =====
+  // Opens the native HTML5 colour picker and applies the chosen colour to the
+  // current target (sticky / shape / pen / text). Caller passes a callback.
+  function openCustomColorPicker(currentHex, onPick) {
+    let input = document.getElementById('custom-color-input');
+    if (!input) {
+      input = document.createElement('input');
+      input.type = 'color';
+      input.id = 'custom-color-input';
+      input.style.cssText = 'position:fixed;top:-100px;left:-100px;opacity:0;pointer-events:none;';
+      document.body.appendChild(input);
+    }
+    input.value = currentHex || '#6366f1';
+    input.onchange = () => onPick(input.value);
+    input.click();
+  }
+
+  function applyCustomShapeColor(hex) {
+    currentShapeColor = hex;
+    showToast('Custom colour selected for shapes');
+  }
+  function applyCustomPenColor(hex) {
+    penColor = hex;
+    document.querySelectorAll('#flyout-pen .color-swatch').forEach(s => s.classList.remove('active'));
+    showToast('Custom pen colour set');
+  }
+  function applyCustomStickyColor(hex) {
+    if (!selectedEl) { showToast('Select a sticky/shape first'); return; }
+    if (selectedEl.classList.contains('sticky')) {
+      ['s-yellow','s-pink','s-blue','s-lilac','s-lime','s-peach','s-mint','s-white'].forEach(c => selectedEl.classList.remove(c));
+      selectedEl.style.background = hex;
+    } else {
+      selectedEl.style.background = hex;
+    }
+    document.querySelectorAll('.ctx-color').forEach(c => c.classList.remove('active'));
+  }
+
+  // ===== FRAME PRESET MENU =====
+  function toggleFrameMenu() {
+    const m = document.getElementById('frame-menu');
+    document.querySelectorAll('.flyout').forEach(f => { if (f !== m) f.classList.remove('open'); });
+    m.classList.toggle('open');
+  }
+
+  // =====================================================================
+  // ===== CONNECTORS (Miro-style) =====
+  // =====================================================================
+  // Data model: each connector is { id, fromId, fromAnchor, toId, toAnchor,
+  //   style: 'curved'|'straight'|'elbow', arrowStart, arrowEnd, label }
+  // We keep a global registry and re-render on any element movement.
+  // (Globals declared at top of script.)
+
+  // Make every connectable element have a stable id we can reference.
+  function ensureElId(el) {
+    if (!el.dataset.kid) el.dataset.kid = 'el-' + (connectorIdSeq++);
+    return el.dataset.kid;
+  }
+
+  // Add 4 anchor dots to an element
+  function attachAnchors(el) {
+    if (el.dataset.anchored === '1') return;
+    el.dataset.anchored = '1';
+    ensureElId(el);
+    ['n','e','s','w'].forEach(side => {
+      const dot = document.createElement('div');
+      dot.className = `anchor-dot anchor-${side}`;
+      dot.dataset.anchor = side;
+      dot.addEventListener('mousedown', e => startConnectorDraw(el, side, e));
+      dot.addEventListener('touchstart', e => {
+        const t = e.touches[0];
+        startConnectorDraw(el, side, { clientX: t.clientX, clientY: t.clientY, preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation() });
+      }, { passive: false });
+      el.appendChild(dot);
+    });
+  }
+
+  // Get the centre of an anchor side in canvas-surface coordinates
+  function getAnchorPoint(el, side) {
+    const r = el.getBoundingClientRect();
+    const sr = canvasSurface.getBoundingClientRect();
+    const left = r.left - sr.left + canvasSurface.scrollLeft;
+    const top = r.top - sr.top + canvasSurface.scrollTop;
+    switch (side) {
+      case 'n': return { x: left + r.width / 2, y: top };
+      case 'e': return { x: left + r.width, y: top + r.height / 2 };
+      case 's': return { x: left + r.width / 2, y: top + r.height };
+      case 'w': return { x: left, y: top + r.height / 2 };
+    }
+  }
+
+  // Compute SVG path based on style
+  function buildConnectorPath(p1, p2, style) {
+    if (style === 'straight') {
+      return `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
+    }
+    if (style === 'elbow') {
+      const midX = (p1.x + p2.x) / 2;
+      return `M ${p1.x} ${p1.y} L ${midX} ${p1.y} L ${midX} ${p2.y} L ${p2.x} ${p2.y}`;
+    }
+    // curved (default) — bezier with horizontal control points
+    const dx = Math.abs(p2.x - p1.x);
+    const dy = Math.abs(p2.y - p1.y);
+    const offset = Math.max(50, Math.min(dx, 200));
+    let c1x = p1.x, c1y = p1.y, c2x = p2.x, c2y = p2.y;
+    // Pull control points outward from each anchor side to make the curve feel natural
+    return `M ${p1.x} ${p1.y} C ${p1.x + (p2.x - p1.x) * 0.5} ${p1.y}, ${p1.x + (p2.x - p1.x) * 0.5} ${p2.y}, ${p2.x} ${p2.y}`;
+  }
+
+  // Render (or re-render) a single connector
+  function renderConnector(conn) {
+    const fromEl = document.querySelector(`[data-kid="${conn.fromId}"]`);
+    const p1 = fromEl ? getAnchorPoint(fromEl, conn.fromAnchor) : conn._dragP1;
+    let p2;
+    if (conn.toId) {
+      const toEl = document.querySelector(`[data-kid="${conn.toId}"]`);
+      p2 = toEl ? getAnchorPoint(toEl, conn.toAnchor) : conn._dragP2;
+    } else {
+      p2 = conn._dragP2;
+    }
+    if (!p1 || !p2) return;
+
+    const d = buildConnectorPath(p1, p2, conn.style);
+    if (!conn._pathEl) {
+      // Create both the visible path and an invisible thick hit-target
+      const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      hit.setAttribute('class', 'connector-hit');
+      hit.dataset.connId = conn.id;
+      hit.addEventListener('click', e => { e.stopPropagation(); selectConnector(conn); });
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('class', 'connector-path');
+      path.dataset.connId = conn.id;
+      connectorLayer.appendChild(hit);
+      connectorLayer.appendChild(path);
+      conn._hitEl = hit;
+      conn._pathEl = path;
+    }
+    conn._hitEl.setAttribute('d', d);
+    conn._pathEl.setAttribute('d', d);
+    conn._pathEl.setAttribute('marker-end', conn.arrowEnd ? 'url(#arrowhead)' : '');
+    conn._pathEl.setAttribute('marker-start', conn.arrowStart ? 'url(#arrowhead-start)' : '');
+    conn._pathEl.classList.toggle('selected', conn === selectedConnector);
+
+    // Position label at midpoint
+    if (conn.label !== undefined) {
+      if (!conn._labelEl) {
+        const label = document.createElement('div');
+        label.className = 'connector-label';
+        label.dataset.connId = conn.id;
+        label.addEventListener('click', e => { e.stopPropagation(); selectConnector(conn); });
+        label.addEventListener('dblclick', e => { e.stopPropagation(); editConnectorLabel(conn); });
+        canvasSurface.appendChild(label);
+        conn._labelEl = label;
+      }
+      conn._labelEl.textContent = conn.label || 'Add label';
+      conn._labelEl.classList.toggle('placeholder', !conn.label);
+      const mid = midpointOnPath(p1, p2, conn.style);
+      conn._labelEl.style.left = mid.x + 'px';
+      conn._labelEl.style.top = mid.y + 'px';
+    }
+  }
+
+  function midpointOnPath(p1, p2, style) {
+    if (style === 'elbow') {
+      return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    }
+    return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+  }
+
+  // Re-render all connectors (called when anything moves)
+  function renderAllConnectors() {
+    connectors.forEach(renderConnector);
+  }
+
+  // ===== Drawing a new connector =====
+  function startConnectorDraw(el, anchor, e) {
+    e.stopPropagation();
+    e.preventDefault();
+    ensureElId(el);
+    drawingConn = {
+      id: 'conn-' + (connectorIdSeq++),
+      fromId: el.dataset.kid,
+      fromAnchor: anchor,
+      toId: null,
+      toAnchor: null,
+      style: 'curved',
+      arrowStart: false,
+      arrowEnd: true,
+      _dragP2: { x: e.clientX, y: e.clientY }
+    };
+    // Convert mouse to canvas coords
+    const sr = canvasSurface.getBoundingClientRect();
+    drawingConn._dragP2 = {
+      x: e.clientX - sr.left + canvasSurface.scrollLeft,
+      y: e.clientY - sr.top + canvasSurface.scrollTop
+    };
+    connectors.push(drawingConn);
+    renderConnector(drawingConn);
+    // Show all anchor dots while drawing so user sees valid drop targets
+    document.querySelectorAll('.anchor-dot').forEach(d => d.classList.add('show'));
+    document.body.style.cursor = 'crosshair';
+  }
+
+  document.addEventListener('mousemove', e => {
+    if (!drawingConn) return;
+    const sr = canvasSurface.getBoundingClientRect();
+    drawingConn._dragP2 = {
+      x: e.clientX - sr.left + canvasSurface.scrollLeft,
+      y: e.clientY - sr.top + canvasSurface.scrollTop
+    };
+    renderConnector(drawingConn);
+  });
+
+  document.addEventListener('mouseup', e => {
+    if (!drawingConn) return;
+    // Find anchor under mouse
+    const target = document.elementFromPoint(e.clientX, e.clientY);
+    if (target && target.classList.contains('anchor-dot')) {
+      const targetEl = target.parentElement;
+      ensureElId(targetEl);
+      drawingConn.toId = targetEl.dataset.kid;
+      drawingConn.toAnchor = target.dataset.anchor;
+      delete drawingConn._dragP2;
+      renderConnector(drawingConn);
+      showToast('Connector created');
+      selectConnector(drawingConn);
+    } else {
+      // Drop in empty space — discard the connector
+      if (drawingConn._pathEl) drawingConn._pathEl.remove();
+      if (drawingConn._hitEl) drawingConn._hitEl.remove();
+      const idx = connectors.indexOf(drawingConn);
+      if (idx >= 0) connectors.splice(idx, 1);
+    }
+    drawingConn = null;
+    document.querySelectorAll('.anchor-dot').forEach(d => d.classList.remove('show'));
+    document.body.style.cursor = '';
+  });
+
+  // ===== Connector selection + ctx menu =====
+  function selectConnector(conn) {
+    deselect(); // clear any selected element
+    selectedConnector = conn;
+    connectors.forEach(c => c._pathEl?.classList.toggle('selected', c === conn));
+    showConnectorCtx(conn);
+  }
+
+  function deselectConnector() {
+    selectedConnector = null;
+    connectors.forEach(c => c._pathEl?.classList.remove('selected'));
+    document.getElementById('connector-ctx').classList.remove('open');
+  }
+
+  function showConnectorCtx(conn) {
+    const menu = document.getElementById('connector-ctx');
+    menu.classList.add('open');
+    // Position above the connector midpoint
+    const fromEl = document.querySelector(`[data-kid="${conn.fromId}"]`);
+    const toEl = document.querySelector(`[data-kid="${conn.toId}"]`);
+    if (fromEl && toEl) {
+      const p1 = getAnchorPoint(fromEl, conn.fromAnchor);
+      const p2 = getAnchorPoint(toEl, conn.toAnchor);
+      const mid = midpointOnPath(p1, p2, conn.style);
+      menu.style.left = Math.max(8, mid.x - 100) + 'px';
+      menu.style.top = Math.max(8, mid.y - 50) + 'px';
+    }
+    // Reflect current style in active button
+    menu.querySelectorAll('[data-style]').forEach(b => {
+      b.classList.toggle('active', b.dataset.style === conn.style);
+    });
+  }
+
+  function setConnectorStyle(style) {
+    if (!selectedConnector) return;
+    selectedConnector.style = style;
+    renderConnector(selectedConnector);
+    showConnectorCtx(selectedConnector);
+  }
+
+  function toggleConnectorArrow(end) {
+    if (!selectedConnector) return;
+    if (end === 'start') selectedConnector.arrowStart = !selectedConnector.arrowStart;
+    if (end === 'end') selectedConnector.arrowEnd = !selectedConnector.arrowEnd;
+    renderConnector(selectedConnector);
+  }
+
+  function addConnectorLabel() {
+    if (!selectedConnector) return;
+    if (selectedConnector.label === undefined) selectedConnector.label = '';
+    renderConnector(selectedConnector);
+    editConnectorLabel(selectedConnector);
+  }
+
+  function editConnectorLabel(conn) {
+    if (!conn._labelEl) return;
+    const el = conn._labelEl;
+    el.classList.remove('placeholder');
+    if (el.textContent === 'Add label') el.textContent = '';
+    el.contentEditable = 'true';
+    el.focus();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    const finish = () => {
+      el.contentEditable = 'false';
+      conn.label = el.textContent.trim();
+      if (!conn.label) {
+        el.textContent = 'Add label';
+        el.classList.add('placeholder');
+      }
+    };
+    el.addEventListener('blur', finish, { once: true });
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el.blur(); }
+      if (e.key === 'Escape') { e.preventDefault(); el.blur(); }
+    });
+  }
+
+  function deleteSelectedConnector() {
+    if (!selectedConnector) return;
+    if (selectedConnector._pathEl) selectedConnector._pathEl.remove();
+    if (selectedConnector._hitEl) selectedConnector._hitEl.remove();
+    if (selectedConnector._labelEl) selectedConnector._labelEl.remove();
+    const idx = connectors.indexOf(selectedConnector);
+    if (idx >= 0) connectors.splice(idx, 1);
+    selectedConnector = null;
+    document.getElementById('connector-ctx').classList.remove('open');
+    showToast('Connector deleted');
+  }
+
+  // Click outside any connector or shape clears selection
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.connector-path, .connector-hit, .connector-ctx, .connector-label')) {
+      // only clear connector selection — the regular deselect logic runs separately
+      if (selectedConnector) deselectConnector();
+    }
+  });
+
+  // Delete key while a connector is selected
+  document.addEventListener('keydown', e => {
+    if (e.target.isContentEditable || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if ((e.key === 'Delete' || e.key === 'Backspace') && selectedConnector) {
+      deleteSelectedConnector();
+      e.preventDefault();
+    }
+    if (e.key === 'Escape' && selectedConnector) deselectConnector();
+  });
+
+  // PEN
+  let penActive = false, penColor = '#0e0e10', penWidth = 2.5, drawing = false, currentPath = null;
+  const penLayer = document.getElementById('pen-layer');
+
+  function togglePen() {
+    penActive = !penActive;
+    canvasSurface.classList.toggle('pen-mode', penActive);
+    if (penActive) {
+      toggleFlyout('pen');
+      showToast('Pen on — draw with mouse');
+      deselect();
+    } else closeAllFlyouts();
+  }
+  function setPenColor(hex, btn) {
+    penColor = hex;
+    document.querySelectorAll('#flyout-pen .color-swatch').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  function setShapeColor(hex, btn) {
+    currentShapeColor = hex;
+    document.querySelectorAll('#flyout-shapes .color-swatch').forEach(s => s.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    // If a shape is selected, update it too
+    if (selectedEl && selectedEl.classList.contains('shape')) {
+      selectedEl.style.background = hex;
+    }
+  }
+  function setPenWidth(w, btn) {
+    penWidth = w;
+    document.querySelectorAll('#flyout-pen .stroke-btn').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  function getPenPoint(e) {
+    const rect = penLayer.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+  }
+  penLayer.addEventListener('mousedown', e => {
+    if (!penActive) return;
+    drawing = true;
+    const p = getPenPoint(e);
+    currentPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    currentPath.setAttribute('d', `M ${p.x} ${p.y}`);
+    currentPath.setAttribute('stroke', penColor);
+    currentPath.setAttribute('stroke-width', penWidth);
+    currentPath.setAttribute('fill', 'none');
+    currentPath.setAttribute('stroke-linecap', 'round');
+    penLayer.appendChild(currentPath);
+    e.preventDefault();
+  });
+  penLayer.addEventListener('mousemove', e => {
+    if (!drawing || !currentPath) return;
+    const p = getPenPoint(e);
+    currentPath.setAttribute('d', currentPath.getAttribute('d') + ` L ${p.x} ${p.y}`);
+  });
+  penLayer.addEventListener('mouseup', () => { drawing = false; currentPath = null; });
+  penLayer.addEventListener('mouseleave', () => { drawing = false; currentPath = null; });
+
+  // IMAGE
+  function openImageModal() { document.getElementById('image-modal').classList.add('open'); }
+  function closeImageModal() { document.getElementById('image-modal').classList.remove('open'); }
+  function addImageFromUrl() {
+    const url = document.getElementById('url-in').value.trim();
+    if (!url) return;
+    addImageToCanvas(url, 'From URL');
+    document.getElementById('url-in').value = '';
+    closeImageModal();
+  }
+  function addStockImage(url) { addImageToCanvas(url, 'Stock image'); closeImageModal(); }
+  function addImageToCanvas(url, caption) {
+    const card = document.createElement('div');
+    card.className = 'img-card';
+    card.style.left = (canvasSurface.scrollLeft + 200) + 'px';
+    card.style.top = (canvasSurface.scrollTop + 200) + 'px';
+    card.style.width = '200px';
+    card.innerHTML = `<img src="${url}" alt=""><div class="img-caption">${caption}</div>`;
+    canvasSurface.appendChild(card);
+    attachInteractions(card);
+    attachAnchors(card);
+    selectElement(card);
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(window._tt);
+    window._tt = setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.target.isContentEditable || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === 'Delete' || e.key === 'Backspace') { if (selectedEl) { deleteSelected(); e.preventDefault(); } }
+    if (e.key === 'Escape') { deselect(); closeAllFlyouts(); closeSettings(); closeImageModal(); if (penActive) togglePen(); }
+    if (e.key.toLowerCase() === 'n') addSticky();
+    if (e.key.toLowerCase() === 't') addText();
+    if (e.key.toLowerCase() === 's') toggleFlyout('shapes');
+    if (e.key.toLowerCase() === 'p') togglePen();
+    if (e.key.toLowerCase() === 'f') toggleFrameMenu();
+  });
+
+  // Initial state
+  updateAIStatus();
+  if (!hasApiKey()) {
+    setTimeout(() => showToast('⚙ Click settings to connect AI'), 900);
+  } else {
+    setTimeout(() => showToast('✨ AI connected — try the purple buttons'), 900);
+  }
+</script>
+
+</body>
+</html>
