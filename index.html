@@ -2856,6 +2856,13 @@
   let currentShapeColor = '#a8d8ff';
   const canvasSurface = document.getElementById('canvas-surface');
 
+  // Connector globals (declared early so init code can call attachAnchors)
+  const connectors = [];
+  let connectorIdSeq = 1;
+  let selectedConnector = null;
+  let drawingConn = null;
+  const connectorLayer = document.getElementById('connector-layer');
+
   function attachInteractions(el) {
     el.addEventListener('mousedown', e => {
       if (penActive) return;
@@ -3285,11 +3292,7 @@
   // Data model: each connector is { id, fromId, fromAnchor, toId, toAnchor,
   //   style: 'curved'|'straight'|'elbow', arrowStart, arrowEnd, label }
   // We keep a global registry and re-render on any element movement.
-
-  const connectors = []; // active connectors
-  let connectorIdSeq = 1;
-  let selectedConnector = null;
-  const connectorLayer = document.getElementById('connector-layer');
+  // (Globals declared at top of script.)
 
   // Make every connectable element have a stable id we can reference.
   function ensureElId(el) {
@@ -3413,7 +3416,6 @@
   }
 
   // ===== Drawing a new connector =====
-  let drawingConn = null;
   function startConnectorDraw(el, anchor, e) {
     e.stopPropagation();
     e.preventDefault();
