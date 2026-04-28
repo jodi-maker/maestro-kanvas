@@ -3103,14 +3103,25 @@
   function addText() {
     const t = document.createElement('div');
     t.className = 'text-el font-sans';
-    t.style.left = (canvasSurface.scrollLeft + 250) + 'px';
-    t.style.top = (canvasSurface.scrollTop + 200) + 'px';
+    t.style.left = (canvasSurface.scrollLeft + 200 + Math.random() * 120) + 'px';
+    t.style.top = (canvasSurface.scrollTop + 150 + Math.random() * 100) + 'px';
     t.style.fontSize = '18px';
-    t.contentEditable = 'true';
     t.textContent = 'Click to edit';
     canvasSurface.appendChild(t);
     attachInteractions(t);
     selectElement(t);
+    // Auto-enter edit mode for the new text so user can type immediately,
+    // but only as a one-shot — clicking out exits edit mode and enables drag.
+    t.contentEditable = 'true';
+    t.focus();
+    const range = document.createRange();
+    range.selectNodeContents(t);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    t.addEventListener('blur', () => {
+      t.contentEditable = 'false';
+    }, { once: true });
   }
 
   function addShape(type) {
