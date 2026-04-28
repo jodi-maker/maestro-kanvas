@@ -619,7 +619,19 @@
     font-size: 8px;
     text-transform: uppercase;
   }
-  .sticky-content { font-weight: 500; min-height: 40px; outline: none; }
+  .sticky-content {
+    font-weight: 500;
+    min-height: 40px;
+    outline: none;
+    cursor: inherit;
+  }
+  .sticky-content[contenteditable="true"] {
+    cursor: text;
+    background: rgba(255,255,255,0.5);
+    border-radius: 4px;
+    padding: 2px;
+    margin: -2px;
+  }
   .sticky-emoji { position: absolute; top: 8px; right: 10px; font-size: 18px; }
 
   .sticky-link {
@@ -2457,22 +2469,35 @@
 
   function attachInteractions(el) {
     el.addEventListener('mousedown', e => {
-      if (penActive || e.target.closest('a')) return;
+      if (penActive) return;
+      // If the user clicked on something interactive inside the sticky (a link,
+      // editable content, button), don't start a drag — let the browser handle
+      // text selection/focus/clicks naturally.
+      if (e.target.closest('a, button, [contenteditable="true"]')) return;
       startDrag(el, e);
       selectElement(el);
     });
     el.addEventListener('touchstart', e => {
       if (penActive) return;
+      if (e.target.closest('a, button, [contenteditable="true"]')) return;
       const t = e.touches[0];
       startDrag(el, { clientX: t.clientX, clientY: t.clientY, preventDefault: () => e.preventDefault() });
       selectElement(el);
     }, { passive: false });
-    el.addEventListener('dblclick', () => {
+    el.addEventListener('dblclick', e => {
       const c = el.querySelector('.sticky-content') || el;
       if (c.isContentEditable) return;
       c.contentEditable = 'true';
       c.focus();
+      // Place cursor at end of content
+      const range = document.createRange();
+      range.selectNodeContents(c);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
       c.addEventListener('blur', () => c.contentEditable = 'false', { once: true });
+      e.stopPropagation();
     });
   }
 
@@ -2507,10 +2532,21 @@
   }
   function hideCtxMenu() { document.getElementById('ctx-menu').classList.remove('open'); }
 
-  let dragEl = null, offX = 0, offY = 0;
+  let dragEl = null, offX = 0, offY = 0, dragParent = null;
   function startDrag(el, e) {
     dragEl = el;
+    // Re-parent the element to the canvas surface so its position is independent
+    // of any frame it was inside. This makes drag work uniformly across the canvas.
+    dragParent = canvasSurface;
     const r = el.getBoundingClientRect();
+    const surfaceRect = canvasSurface.getBoundingClientRect();
+    // If the element isn't already a direct child of canvas-surface, re-parent it
+    // and convert its position to surface-relative coordinates.
+    if (el.parentElement !== canvasSurface) {
+      el.style.left = (r.left - surfaceRect.left + canvasSurface.scrollLeft) + 'px';
+      el.style.top = (r.top - surfaceRect.top + canvasSurface.scrollTop) + 'px';
+      canvasSurface.appendChild(el);
+    }
     offX = e.clientX - r.left;
     offY = e.clientY - r.top;
     el.style.zIndex = 100;
@@ -2518,12 +2554,21 @@
   }
   document.addEventListener('mousemove', e => {
     if (!dragEl) return;
-    const p = dragEl.parentElement.getBoundingClientRect();
-    dragEl.style.left = (e.clientX - p.left - offX) + 'px';
-    dragEl.style.top = (e.clientY - p.top - offY) + 'px';
+    const surfaceRect = canvasSurface.getBoundingClientRect();
+    dragEl.style.left = (e.clientX - surfaceRect.left + canvasSurface.scrollLeft - offX) + 'px';
+    dragEl.style.top = (e.clientY - surfaceRect.top + canvasSurface.scrollTop - offY) + 'px';
     if (selectedEl === dragEl) showCtxMenu(dragEl);
   });
+  document.addEventListener('touchmove', e => {
+    if (!dragEl) return;
+    const t = e.touches[0];
+    const surfaceRect = canvasSurface.getBoundingClientRect();
+    dragEl.style.left = (t.clientX - surfaceRect.left + canvasSurface.scrollLeft - offX) + 'px';
+    dragEl.style.top = (t.clientY - surfaceRect.top + canvasSurface.scrollTop - offY) + 'px';
+    e.preventDefault();
+  }, { passive: false });
   document.addEventListener('mouseup', () => { if (dragEl) dragEl.style.zIndex = ''; dragEl = null; });
+  document.addEventListener('touchend', () => { if (dragEl) dragEl.style.zIndex = ''; dragEl = null; });
 
   document.querySelectorAll('.sticky, .shape, .text-el, .img-card, .mm-node').forEach(attachInteractions);
 
@@ -2616,11 +2661,21 @@
     s.className = `sticky ${color} font-sans`;
     s.style.left = (canvasSurface.scrollLeft + 200 + Math.random() * 80) + 'px';
     s.style.top = (canvasSurface.scrollTop + 150 + Math.random() * 80) + 'px';
-    s.innerHTML = `<div class="sticky-tags"><span class="sticky-tag">NEW</span></div><div class="sticky-content" contenteditable="true">Type here...</div>`;
+    s.innerHTML = `<div class="sticky-tags"><span class="sticky-tag">NEW</span></div><div class="sticky-content">Type here...</div>`;
     canvasSurface.appendChild(s);
     attachInteractions(s);
     selectElement(s);
-    s.querySelector('.sticky-content').focus();
+    // Auto-focus into edit mode for the new sticky so user can type immediately.
+    const content = s.querySelector('.sticky-content');
+    content.contentEditable = 'true';
+    content.focus();
+    // Select all the placeholder text so typing replaces it
+    const range = document.createRange();
+    range.selectNodeContents(content);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    content.addEventListener('blur', () => content.contentEditable = 'false', { once: true });
   }
 
   function addText() {
