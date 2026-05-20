@@ -292,7 +292,7 @@
     border-radius: 10px;
     box-shadow: 0 12px 36px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.02);
     padding: 8px;
-    z-index: 250;
+    z-index: 50;
     opacity: 0;
     transform: translateY(-4px);
     pointer-events: none;
@@ -3031,7 +3031,24 @@
     if (app)  app.style.display  = 'none';
     if (auth) auth.style.display = 'flex';
     showAuthPanel('login');
-    const pw = document.getElementById('login-password'); if (pw) pw.value = '';
+
+    ['login-email','login-password',
+     'ca-first','ca-last','ca-email','ca-password',
+     'forgot-email'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    ['remember-me','ca-terms'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.checked = false;
+    });
+    const role = document.getElementById('ca-role'); if (role) role.selectedIndex = 0;
+
+    document.getElementById('auth-email-section')?.classList.add('email-collapsed');
+    document.getElementById('auth-demo-section')?.classList.add('demo-collapsed');
+
+    const pwWrap = document.getElementById('pw-strength-wrap'); if (pwWrap) pwWrap.style.display = 'none';
+    ['login-error','create-error','create-confirm','forgot-confirm'].forEach(id => {
+      const el = document.getElementById(id); if (el) { el.style.display = 'none'; el.textContent = el.id === 'forgot-confirm' ? 'Reset link sent — check your inbox.' : el.id === 'create-confirm' ? 'Request submitted — an admin will approve your account.' : ''; }
+    });
   }
 
   function toggleUserMenu(e) {
