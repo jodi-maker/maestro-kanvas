@@ -246,6 +246,104 @@
   }
   .ai-status-dot.connected { background: #5bc4a8; }
 
+  /* ===== USER CHIP + SIGN-OUT MENU ===== */
+  .user-chip-wrap { position: relative; }
+  .user-chip {
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    color: var(--ink);
+    height: 32px;
+    padding: 0 10px 0 4px;
+    border-radius: 999px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    transition: all 0.18s;
+  }
+  .user-chip:hover { border-color: var(--accent); }
+  .user-chip-av {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--gradient);
+    color: #fff;
+    font-size: 10px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .user-chip-name { color: var(--ink); }
+  .user-chip-chev {
+    width: 10px; height: 10px;
+    color: var(--ink-soft);
+    transition: transform 0.18s;
+  }
+  .user-chip.open .user-chip-chev { transform: rotate(180deg); }
+
+  .user-menu {
+    position: absolute;
+    right: 0; top: calc(100% + 6px);
+    min-width: 220px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.02);
+    padding: 8px;
+    z-index: 50;
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  [data-theme="light"] .user-menu {
+    box-shadow: 0 12px 36px rgba(10,10,20,0.12), 0 0 0 1px rgba(10,10,20,0.04);
+  }
+  .user-menu.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .user-menu-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px 12px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 6px;
+  }
+  .user-menu-av {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--gradient);
+    color: #fff;
+    font-size: 12px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .user-menu-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .user-menu-role {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 0.02em;
+    margin-top: 2px;
+  }
+  .user-menu-item {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    text-align: left;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    transition: background 0.12s, color 0.12s;
+  }
+  .user-menu-item:hover { background: var(--accent-soft); color: var(--accent-hover); }
+  .user-menu-item svg { flex-shrink: 0; color: var(--ink-soft); }
+  .user-menu-item:hover svg { color: var(--accent-hover); }
+
   /* ===== SIDEBAR ===== */
   .sidebar {
     background: var(--surface);
@@ -2221,6 +2319,26 @@
       <svg id="theme-sun" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="display:none;"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5L13 13M3 13l1.5-1.5M11.5 4.5L13 3"/></svg>
       <svg id="theme-moon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 9.5A5.5 5.5 0 116.5 3a4.5 4.5 0 006.5 6.5z"/></svg>
     </button>
+    <div class="user-chip-wrap">
+      <button class="user-chip" id="user-chip" onclick="toggleUserMenu(event)" aria-haspopup="menu" aria-expanded="false">
+        <span class="user-chip-av" id="user-chip-av">JD</span>
+        <span class="user-chip-name hide-mobile" id="user-chip-name">User</span>
+        <svg class="user-chip-chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 3.5l3 3 3-3"/></svg>
+      </button>
+      <div class="user-menu" id="user-menu" role="menu" aria-labelledby="user-chip">
+        <div class="user-menu-header">
+          <div class="user-menu-av" id="user-menu-av">JD</div>
+          <div>
+            <div class="user-menu-name" id="user-menu-name">User</div>
+            <div class="user-menu-role" id="user-menu-role">Editor</div>
+          </div>
+        </div>
+        <button class="user-menu-item" onclick="logout()" role="menuitem">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4V2.5A1.5 1.5 0 008.5 1h-5A1.5 1.5 0 002 2.5v11A1.5 1.5 0 003.5 15h5a1.5 1.5 0 001.5-1.5V12"/><path d="M6 8h9M12 5l3 3-3 3"/></svg>
+          Sign out
+        </button>
+      </div>
+    </div>
   </header>
 
   <aside class="sidebar" id="sidebar">
@@ -2896,7 +3014,65 @@
     const app  = document.getElementById('app-shell');
     if (auth) auth.style.display = 'none';
     if (app)  app.style.display  = 'grid';
+
+    const safeInitials = (initials || (name||'U').slice(0,2)).toUpperCase();
+    const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setText('user-chip-av',  safeInitials);
+    setText('user-chip-name', name || 'User');
+    setText('user-menu-av',  safeInitials);
+    setText('user-menu-name', name || 'User');
+    setText('user-menu-role', role || 'Editor');
   }
+
+  function logout() {
+    closeUserMenu();
+    const auth = document.getElementById('auth-screen');
+    const app  = document.getElementById('app-shell');
+    if (app)  app.style.display  = 'none';
+    if (auth) auth.style.display = 'flex';
+    showAuthPanel('login');
+
+    ['login-email','login-password',
+     'ca-first','ca-last','ca-email','ca-password',
+     'forgot-email'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    ['remember-me','ca-terms'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.checked = false;
+    });
+    const role = document.getElementById('ca-role'); if (role) role.selectedIndex = 0;
+
+    document.getElementById('auth-email-section')?.classList.add('email-collapsed');
+    document.getElementById('auth-demo-section')?.classList.add('demo-collapsed');
+
+    const pwWrap = document.getElementById('pw-strength-wrap'); if (pwWrap) pwWrap.style.display = 'none';
+    ['login-error','create-error','create-confirm','forgot-confirm'].forEach(id => {
+      const el = document.getElementById(id); if (el) { el.style.display = 'none'; el.textContent = el.id === 'forgot-confirm' ? 'Reset link sent — check your inbox.' : el.id === 'create-confirm' ? 'Request submitted — an admin will approve your account.' : ''; }
+    });
+  }
+
+  function toggleUserMenu(e) {
+    if (e) e.stopPropagation();
+    const chip = document.getElementById('user-chip');
+    const menu = document.getElementById('user-menu');
+    if (!chip || !menu) return;
+    const open = menu.classList.toggle('open');
+    chip.classList.toggle('open', open);
+    chip.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  function closeUserMenu() {
+    const chip = document.getElementById('user-chip');
+    const menu = document.getElementById('user-menu');
+    if (menu) menu.classList.remove('open');
+    if (chip) { chip.classList.remove('open'); chip.setAttribute('aria-expanded', 'false'); }
+  }
+
+  document.addEventListener('click', (e) => {
+    const wrap = e.target.closest('.user-chip-wrap');
+    if (!wrap) closeUserMenu();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeUserMenu(); });
 
   function showAuthPanel(panel) {
     ['login','forgot','create'].forEach(p => {
