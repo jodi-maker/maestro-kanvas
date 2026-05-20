@@ -1989,6 +1989,7 @@
     letter-spacing:-.025em;line-height:1;margin-bottom:8px;
     background:linear-gradient(90deg, var(--ink) 0%, var(--gradient-1) 30%, var(--gradient-3) 60%, var(--ink) 100%);
     background-size:200% auto;
+    color:transparent;
     -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
     animation:auth-shimmer-title 4s linear infinite;
   }
@@ -2125,7 +2126,7 @@
           <span class="auth-link" style="margin:0;font-size:12px" onclick="showAuthPanel('forgot')">Forgot password?</span>
         </div>
         <button class="auth-btn-primary" onclick="submitLogin()">Sign in</button>
-        <div id="login-error" class="auth-error" style="display:none"></div>
+        <div id="login-error" class="auth-error" role="alert" aria-live="assertive" style="display:none"></div>
       </div>
 
       <div class="auth-demo-section demo-collapsed" id="auth-demo-section">
@@ -2157,7 +2158,7 @@
       <div class="auth-sub" style="margin-bottom:18px">Enter your work email and we'll send a reset link.</div>
       <div class="auth-form-row"><label class="auth-form-label">Work email</label><input class="auth-form-input" id="forgot-email" type="email" placeholder="you@company.com"/></div>
       <button class="auth-btn-primary" style="margin-top:4px" onclick="submitForgot()">Send reset link</button>
-      <div id="forgot-confirm" class="auth-confirm" style="display:none">Reset link sent — check your inbox.</div>
+      <div id="forgot-confirm" class="auth-confirm" role="status" aria-live="polite" style="display:none">Reset link sent — check your inbox.</div>
     </div>
     <!-- Create account panel -->
     <div id="auth-create" style="display:none">
@@ -2191,8 +2192,8 @@
         <span>I agree to the <span class="auth-terms-link">Terms</span> and <span class="auth-terms-link">Privacy Policy</span></span>
       </label>
       <button class="auth-btn-primary" style="margin-top:4px" onclick="submitCreate()">Request access</button>
-      <div id="create-confirm" class="auth-confirm" style="display:none">Request submitted — an admin will approve your account.</div>
-      <div id="create-error" class="auth-error" style="display:none"></div>
+      <div id="create-confirm" class="auth-confirm" role="status" aria-live="polite" style="display:none">Request submitted — an admin will approve your account.</div>
+      <div id="create-error" class="auth-error" role="alert" aria-live="assertive" style="display:none"></div>
     </div>
   </div>
 </div>
@@ -2877,6 +2878,19 @@
   // ====================================================================
   // ======== AUTH SCREEN ========
   // ====================================================================
+  //
+  // ⚠️  CLIENT-SIDE DEMO AUTH — NOT A SECURITY BOUNDARY.
+  //
+  // This screen is a UI mock that gates the canvas behind a CSS toggle.
+  // There is no backend: any password >= 6 chars is accepted, SSO buttons
+  // map to fixed demo personas, and "Create account" only shows a toast.
+  // Anyone with DevTools can run
+  //   document.getElementById('auth-screen').style.display = 'none';
+  //   document.getElementById('app-shell').style.display  = 'grid';
+  // to bypass the gate. Before any production use, replace login() and
+  // ssoLogin() with real authenticated calls (e.g. OAuth / fetch to an
+  // auth endpoint) and only reveal app-shell after a confirmed response.
+  //
   function login(role, name, initials) {
     const auth = document.getElementById('auth-screen');
     const app  = document.getElementById('app-shell');
